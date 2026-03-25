@@ -1,0 +1,9 @@
+# Tree Generation Parameters
+species: [10, 50]
+birth_death_rates: [1.0, 2.0]
+replicates: [1, 2, 3]
+
+sampling_fraction: [ 0.01, 0.25, 0.99]
+mutation_rate: [0.8, 1.0, 1.7]
+
+evolver_path: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
