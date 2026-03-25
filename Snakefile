@@ -4,7 +4,6 @@ import os
 
 # Path to evolver
 EVOLVER = config["evolver_path"]
-EVOLVER_DIR = os.path.dirname(EVOLVER)
 
 # Extracting parameters
 SPECIES = config["species"]
@@ -16,7 +15,7 @@ MUTATION = config["mutation_rate"]
 rule all:
     input:
         [
-            f"results/tree_s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_r{r}.tre"
+            f"results/trees/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_r{r}.nwk"
             for s in SPECIES
             for pair in BIRTH_DEATH_PAIRS
             for f in SAMPLING
@@ -26,20 +25,16 @@ rule all:
 
 rule generate_tree:
     output:
-        "results/tree_s{s}_b{b}_d{d}_f{f}_m{m}_r{r}.tre"
+        "results/trees/s{s}_b{b}_d{d}_f{f}_m{m}_r{r}.nwk"
     params:
-        evolver = EVOLVER,
-        evolver_dir = EVOLVER_DIR
+        evolver = EVOLVER
+    shadow: "minimal"
     shell:
         """
-        # Run evolver from its own directory
-        # This ensures evolver.out is created in that directory
-        cd {params.evolver_dir}
-        printf "2\\n{wildcards.s}\\n1 {wildcards.r} 1\\n{wildcards.b} {wildcards.d} {wildcards.f} {wildcards.m}\\n0\\n" | ./evolver > /dev/null 2>&1
+        # Run evolver. Because of shadow: "minimal", evolver.out 
+        # is created in an isolated directory for this specific job.
+        printf "2\\n{wildcards.s}\\n1 {wildcards.r} 1\\n{wildcards.b} {wildcards.d} {wildcards.f} {wildcards.m}\\n0\\n" | {params.evolver} > /dev/null 2>&1
         
-        # Move the result to the destination (relative to current script path)
-        tail -n 1 evolver.out > "$OLDPWD/{output}"
-        
-        # Clean up
-        rm -f evolver.out
+        # Extract the tree from the local, isolated evolver.out
+        tail -n 1 evolver.out > {output}
         """
