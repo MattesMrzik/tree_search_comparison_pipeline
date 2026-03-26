@@ -29,36 +29,32 @@ MU = config["tkf_mu"]
 R = config["tkf_r"]
 MAX_INS = config["max_insertion_length"]
 
+# Path Templates
+# {s}, {b}, {d}, {f}, {m}, {seed} are wildcards
+SIM_DIR = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}"
+# {model}, {gap} are additional wildcards
+# Using double braces to escape them in the f-string for Snakemake's consumption
+INF_DIR = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
+
 rule all:
     input:
-        [
-            f"results/msas/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/tree_plot.png"
-            for s in SPECIES
-            for pair in BIRTH_DEATH_PAIRS
-            for f in SAMPLING
-            for m in MUTATION
-            for seed in SEEDS
-        ],
-        [
-            f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/distances.json"
-            for s in SPECIES
-            for pair in BIRTH_DEATH_PAIRS
-            for f in SAMPLING
-            for m in MUTATION
-            for seed in SEEDS
-            for model in JATI_MODELS
-            for gap in GAP_STRATEGIES
-        ],
-        [
-            f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/time.txt"
-            for s in SPECIES
-            for pair in BIRTH_DEATH_PAIRS
-            for f in SAMPLING
-            for m in MUTATION
-            for seed in SEEDS
-            for model in JATI_MODELS
-            for gap in GAP_STRATEGIES
-        ]
+        expand(f"{SIM_DIR}/tree_plot.png", 
+               s=SPECIES, 
+               b=[p[0] for p in BIRTH_DEATH_PAIRS], 
+               d=[p[1] for p in BIRTH_DEATH_PAIRS], 
+               f=SAMPLING, m=MUTATION, seed=SEEDS),
+        expand(f"{INF_DIR}/distances.json", 
+               s=SPECIES, 
+               b=[p[0] for p in BIRTH_DEATH_PAIRS], 
+               d=[p[1] for p in BIRTH_DEATH_PAIRS], 
+               f=SAMPLING, m=MUTATION, seed=SEEDS, 
+               model=JATI_MODELS, gap=GAP_STRATEGIES),
+        expand(f"{INF_DIR}/time.txt", 
+               s=SPECIES, 
+               b=[p[0] for p in BIRTH_DEATH_PAIRS], 
+               d=[p[1] for p in BIRTH_DEATH_PAIRS], 
+               f=SAMPLING, m=MUTATION, seed=SEEDS, 
+               model=JATI_MODELS, gap=GAP_STRATEGIES)
 
 rule generate_tree:
     output:
@@ -80,17 +76,17 @@ rule simulate_tkf:
     input:
         tree = "results/trees/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}.nwk"
     output:
-        msa = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/msa.fasta",
-        masa = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/masa.fasta",
-        info = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/info.txt",
-        tree_copy = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/tree.nwk"
+        msa = f"{SIM_DIR}/msa.fasta",
+        masa = f"{SIM_DIR}/masa.fasta",
+        info = f"{SIM_DIR}/info.txt",
+        tree_copy = f"{SIM_DIR}/tree.nwk"
     params:
         bin = SIMULATE_TKF,
         lambda_val = LAMBDA,
         mu_val = MU,
         r_val = R,
         max_ins = MAX_INS,
-        out_dir = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}"
+        out_dir = f"{SIM_DIR}"
     shell:
         """
         {params.bin} \
@@ -108,9 +104,9 @@ rule simulate_tkf:
 
 rule visualize_msa_tree:
     input:
-        tree = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/tree.nwk"
+        tree = f"{SIM_DIR}/tree.nwk"
     output:
-        plot = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/tree_plot.png"
+        plot = f"{SIM_DIR}/tree_plot.png"
     params:
         script = "scripts/visualize_trees.py",
         py_bin = PYTHON
@@ -122,9 +118,9 @@ rule visualize_msa_tree:
 # We use this checkpoint since jati's output directory is not deterministic and we need to wait for it to be created before we can move files around
 checkpoint jati_inference:
     input:
-        msa = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/msa.fasta"
+        msa = f"{SIM_DIR}/msa.fasta"
     output:
-        outdir = directory("results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/out")
+        outdir = directory(f"{INF_DIR}/out")
     params:
         bin = JATI,
         paras = " ".join(map(str, JATI_PARAS)),
@@ -155,12 +151,12 @@ rule jati_cleanup:
     input:
         dir = get_jati_output
     output:
-        start_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/start_tree.newick",
-        final_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.newick",
-        logl = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/logl.out",
-        log = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/log.txt"
+        start_tree = f"{INF_DIR}/start_tree.newick",
+        final_tree = f"{INF_DIR}/final_tree.newick",
+        logl = f"{INF_DIR}/logl.out",
+        log = f"{INF_DIR}/log.txt"
     params:
-        target_dir = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
+        target_dir = f"{INF_DIR}"
     shell:
         """
         mv {input.dir}/* {params.target_dir}/
@@ -177,10 +173,10 @@ rule jati_cleanup:
 
 rule calculate_distances:
     input:
-        true_tree = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/tree.nwk",
-        final_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.newick"
+        true_tree = f"{SIM_DIR}/tree.nwk",
+        final_tree = f"{INF_DIR}/final_tree.newick"
     output:
-        dist_file = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/distances.json"
+        dist_file = f"{INF_DIR}/distances.json"
     params:
         script = "scripts/calculate_distances.py",
         py_bin = PYTHON
@@ -189,9 +185,9 @@ rule calculate_distances:
 
 rule calculate_time:
     input:
-        log = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/log.txt"
+        log = f"{INF_DIR}/log.txt"
     output:
-        time_file = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/time.txt"
+        time_file = f"{INF_DIR}/time.txt"
     params:
         script = "scripts/calculate_time.py",
         py_bin = PYTHON
