@@ -3,35 +3,19 @@ import os
 import re
 import csv
 
-def extract_params_from_path(path):
+def extract_params_from_path(path, sim_regex, inf_regex):
     """
-    Parses parameters from paths like:
-    results/inference/s50_b1.0_d2.0_f0.25_m1.0_seed1/jc69_TKF92_jati
+    Parses parameters from paths using regex with named groups from config.
     """
-    # Regex to extract numeric params from the first level directory
-    # results/inference/s50_b1.0_d2.0_f0.25_m1.0_seed1/...
-    sim_match = re.search(r's(\d+)_b([\d.]+)_d([\d.]+)_f([\d.]+)_m([\d.]+)_seed(\d+)', path)
-    
-    # Regex to extract model and gap strategy from the second level directory
-    # .../jc69_TKF92_jati
-    inf_match = re.search(r'([^/]+)_([^/]+)_jati', path)
-
     params = {}
-    if sim_match:
-        params.update({
-            "species": int(sim_match.group(1)),
-            "birth_rate": float(sim_match.group(2)),
-            "death_rate": float(sim_match.group(3)),
-            "sampling_fraction": float(sim_match.group(4)),
-            "mutation_rate": float(sim_match.group(5)),
-            "seed": int(sim_match.group(6))
-        })
     
+    sim_match = re.search(sim_regex, path)
+    if sim_match:
+        params.update(sim_match.groupdict())
+    
+    inf_match = re.search(inf_regex, path)
     if inf_match:
-        params.update({
-            "jati_model": inf_match.group(1),
-            "gap_strategy": inf_match.group(2)
-        })
+        params.update(inf_match.groupdict())
         
     return params
 
@@ -53,6 +37,9 @@ def main():
     # snakemake.params.dirs, snakemake.params.full_config, snakemake.output[0]
     
     config = snakemake.params.full_config
+    sim_regex = config["sim_match"]
+    inf_regex = config["inf_match"]
+
     global_params = {
         "tkf_lambda": config.get("tkf_lambda", "NA"),
         "tkf_mu": config.get("tkf_mu", "NA"),
@@ -63,8 +50,8 @@ def main():
 
     rows = []
     for d in snakemake.params.dirs:
-        # 1. Start with wildcards extracted from the path
-        row = extract_params_from_path(d)
+        # 1. Start with wildcards extracted from the path using named groups
+        row = extract_params_from_path(d, sim_regex, inf_regex)
         
         # 2. Add global constants from config
         row.update(global_params)
@@ -77,12 +64,12 @@ def main():
                 with open(dist_path, 'r') as f:
                     dists = json.load(f)
                     # Use a consistent order or just update
-                    for key in ["robinson_foulds", "normalized_robinson_foulds", "kuhner_felsenstein"]:
+                    for key in ["robinson_foulds", "kuhner_felsenstein"]:
                         row[key] = dists.get(key, "NA")
             except Exception:
-                row.update({"robinson_foulds": "NA", "normalized_robinson_foulds": "NA", "kuhner_felsenstein": "NA"})
+                row.update({"robinson_foulds": "NA", "kuhner_felsenstein": "NA"})
         else:
-            row.update({"robinson_foulds": "NA", "normalized_robinson_foulds": "NA", "kuhner_felsenstein": "NA"})
+            row.update({"robinson_foulds": "NA", "kuhner_felsenstein": "NA"})
 
         # Time
         time_path = os.path.join(d, "time.txt")

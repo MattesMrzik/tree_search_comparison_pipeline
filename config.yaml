@@ -25,3 +25,10 @@ max_iterations: 1
 
 # Paths
 python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
+sim_dir: "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}"
+inf_dir: "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
+
+# Regex for parsing paths in aggregate_results.py
+# Use named groups (?P<name>...) to define the fields to extract
+sim_match: 's(?P<species>\d+)_b(?P<birth_rate>[\d.]+)_d(?P<death_rate>[\d.]+)_f(?P<sampling_fraction>[\d.]+)_m(?P<mutation_rate>[\d.]+)_seed(?P<seed>\d+)'
+inf_match: '(?P<jati_model>[^/]+)_(?P<gap_strategy>[^/]+)_jati'

@@ -29,12 +29,9 @@ MU = config["tkf_mu"]
 R = config["tkf_r"]
 MAX_INS = config["max_insertion_length"]
 
-# Path Templates
-# {s}, {b}, {d}, {f}, {m}, {seed} are wildcards
-SIM_DIR = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}"
-# {model}, {gap} are additional wildcards
-# Using double braces to escape them in the f-string for Snakemake's consumption
-INF_DIR = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
+# Path Templates from config
+SIM_DIR = config["sim_dir"]
+INF_DIR = config["inf_dir"]
 
 # Target Generator
 def get_all_inference_dirs():
