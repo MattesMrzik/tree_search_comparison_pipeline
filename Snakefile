@@ -136,7 +136,6 @@ checkpoint jati_inference:
 def get_jati_output(wildcards):
     outdir = checkpoints.jati_inference.get(**wildcards).output.outdir
     dirs = glob.glob(f"{outdir}/*_out/")
-    print(dirs)
     if not dirs:
         raise ValueError(f"JATI failed to produce an output directory in {outdir}")
     return dirs[0]
@@ -147,9 +146,9 @@ rule jati_cleanup:
     output:
         start_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/start_tree.newick",
         final_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.newick",
-        logl = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/logl.out"
+        logl = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/logl.out",
+        log = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/log.txt"
     params:
-        # this is the parent of the output files, perhaps we can make use of this to make the code cleaner
         target_dir = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
     shell:
         """
@@ -162,4 +161,5 @@ rule jati_cleanup:
         done
         
         mv {params.target_dir}/tree.newick {output.final_tree}
+        mv {params.target_dir}/*.log {output.log}
         """
