@@ -190,9 +190,9 @@ rule aggregate_summary:
         [f"{d}/time.txt" for d in get_all_inference_dirs()],
         [f"{d}/logl.out" for d in get_all_inference_dirs()]
     output:
-        "results/summary.tsv"
+        tsv_path = "results/summary.tsv"
     params:
         dirs = get_all_inference_dirs(),
-        full_config = config
+        sn_config = config
     script:
         "scripts/aggregate_results.py"
