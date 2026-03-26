@@ -1,11 +1,20 @@
 # Tree Generation Parameters
-species: [10, 50]
+species: [10]
 birth_death_rates:
   - [1.0, 2.0]
-  - [1.4, 1.5]
-replicates: [1, 2, 3]
+seeds: [1]
 
-sampling_fraction: [ 0.01, 0.25, 0.99]
-mutation_rate: [0.8, 1.0, 1.7]
+sampling_fraction: [0.25]
+mutation_rate: [1.0]
 
 evolver_path: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
+
+# TKF92 Simulation Parameters
+tkf_lambda: 0.1
+tkf_mu: 0.11
+tkf_r: 0.8
+max_insertion_length: 50
+simulate_tkf_path: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
+
+# Paths
+python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
