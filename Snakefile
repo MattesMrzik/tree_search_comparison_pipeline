@@ -1,6 +1,7 @@
 configfile: "config.yaml"
 
 import os
+import glob
 
 # Path to tools
 EVOLVER = config["evolver_path"]
@@ -19,6 +20,7 @@ MUTATION = config["mutation_rate"]
 JATI_MODELS = config["jati_models"]
 JATI_PARAS = config["jati_paras"]
 GAP_STRATEGIES = config["gap_handling_strategies"]
+MAX_ITERATIONS = config["max_iterations"]
 
 # TKF92 Parameters
 LAMBDA = config["tkf_lambda"]
@@ -37,7 +39,7 @@ rule all:
             for seed in SEEDS
         ],
         [
-            f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/reconstructed_tree.nwk"
+            f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.nwk"
             for s in SPECIES
             for pair in BIRTH_DEATH_PAIRS
             for f in SAMPLING
@@ -106,42 +108,58 @@ rule visualize_msa_tree:
         {params.py_bin} {params.script} --tree-file {input.tree} --output-file {output.plot}
         """
 
-rule jati_inference:
+# We use this checkpoint since jati's output directory is not deterministic and we need to wait for it to be created before we can move files around
+checkpoint jati_inference:
     input:
         msa = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/msa.fasta"
     output:
-        dir = directory("results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati_raw")
+        outdir = directory("results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/out")
     params:
         bin = JATI,
         paras = " ".join(map(str, JATI_PARAS)),
+        log_level = "warn",
+        max_iterations = MAX_ITERATIONS
     shell:
         """
-        mkdir -p {output.dir}
+        mkdir -p {output.outdir}
         {params.bin} \
-            --out-folder {output.dir} \
+            --out-folder {output.outdir} \
             --seq-file {input.msa} \
             --model {wildcards.model} \
             --params {params.paras} \
             --gap-handling {wildcards.gap} \
             --seed {wildcards.seed} \
-            -l info
+            -l {params.log_level} \
+            --max-iterations {params.max_iterations} 
         """
+
+def get_jati_output(wildcards):
+    outdir = checkpoints.jati_inference.get(**wildcards).output.outdir
+    dirs = glob.glob(f"{outdir}/*_out/")
+    print(dirs)
+    if not dirs:
+        raise ValueError(f"JATI failed to produce an output directory in {outdir}")
+    return dirs[0]
 
 rule jati_cleanup:
     input:
-        dir = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati_raw"
+        dir = get_jati_output
     output:
-        tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/reconstructed_tree.nwk"
+        start_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/start_tree.nwk",
+        final_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.nwk",
+        logl = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/logl.out"
     params:
+        # this is the parent of the output files, perhaps we can make use of this to make the code cleaner
         target_dir = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
     shell:
         """
-        mkdir -p {params.target_dir}
-        
-        mv {input.dir}/*/* {params.target_dir}/ 2>/dev/null || true
-            
-        # Remove timestamp prefixes from all files in the target directory
-        find {params.target_dir} -type f -name *_* | while read f; do mv $f ${{f%/*}}/${{f##*_}}             
+        cp {input.dir}/* {params.target_dir}/
 
-        mv {params.target_dir}/tree.newick {output.tree}
+        # striping the time stamp prefix
+        for f in {params.target_dir}/[0-9]*_*; do
+            base="${{f##*/}}"
+            cp "$f" "{params.target_dir}/${{base#*_}}"
+        done
+        
+        mv {params.target_dir}/tree.nwk {output.final_tree}
         """

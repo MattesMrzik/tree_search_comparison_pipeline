@@ -21,6 +21,7 @@ jati_path: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
 jati_models: ["jc69"]
 jati_paras: [0.3, 0.4, 0.5]
 gap_handling_strategies: ["PIP", "TKF92"]
+max_iterations: 1
 
 # Paths
 python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
