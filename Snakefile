@@ -39,7 +39,7 @@ rule all:
             for seed in SEEDS
         ],
         [
-            f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.nwk"
+            f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.newick"
             for s in SPECIES
             for pair in BIRTH_DEATH_PAIRS
             for f in SAMPLING
@@ -145,21 +145,21 @@ rule jati_cleanup:
     input:
         dir = get_jati_output
     output:
-        start_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/start_tree.nwk",
-        final_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.nwk",
+        start_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/start_tree.newick",
+        final_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.newick",
         logl = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/logl.out"
     params:
         # this is the parent of the output files, perhaps we can make use of this to make the code cleaner
         target_dir = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
     shell:
         """
-        cp {input.dir}/* {params.target_dir}/
+        mv {input.dir}/* {params.target_dir}/
 
         # striping the time stamp prefix
         for f in {params.target_dir}/[0-9]*_*; do
             base="${{f##*/}}"
-            cp "$f" "{params.target_dir}/${{base#*_}}"
+            mv "$f" "{params.target_dir}/${{base#*_}}"
         done
         
-        mv {params.target_dir}/tree.nwk {output.final_tree}
+        mv {params.target_dir}/tree.newick {output.final_tree}
         """
