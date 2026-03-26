@@ -40,6 +40,16 @@ rule all:
             for seed in SEEDS
         ],
         [
+            f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/distances.json"
+            for s in SPECIES
+            for pair in BIRTH_DEATH_PAIRS
+            for f in SAMPLING
+            for m in MUTATION
+            for seed in SEEDS
+            for model in JATI_MODELS
+            for gap in GAP_STRATEGIES
+        ],
+        [
             f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/time.txt"
             for s in SPECIES
             for pair in BIRTH_DEATH_PAIRS
@@ -164,6 +174,18 @@ rule jati_cleanup:
         mv {params.target_dir}/tree.newick {output.final_tree}
         mv {params.target_dir}/*.log {output.log}
         """
+
+rule calculate_distances:
+    input:
+        true_tree = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/tree.nwk",
+        final_tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/final_tree.newick"
+    output:
+        dist_file = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/distances.json"
+    params:
+        script = "scripts/calculate_distances.py",
+        py_bin = PYTHON
+    shell:
+        "{params.py_bin} {params.script} --tree1 {input.true_tree} --tree2 {input.final_tree} --output {output.dist_file}"
 
 rule calculate_time:
     input:
