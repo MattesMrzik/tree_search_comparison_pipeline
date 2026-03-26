@@ -44,7 +44,12 @@ def get_all_inference_dirs():
 
 rule all:
     input:
-        "results/summary.tsv"
+        "results/summary.tsv",
+        expand(f"{SIM_DIR}/tree_plot.png", 
+               s=SPECIES, 
+               b=[p[0] for p in BIRTH_DEATH_PAIRS], 
+               d=[p[1] for p in BIRTH_DEATH_PAIRS], 
+               f=SAMPLING, m=MUTATION, seed=SEEDS)
 
 rule generate_tree:
     output:
