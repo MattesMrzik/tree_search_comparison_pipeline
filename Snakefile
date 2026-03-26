@@ -123,7 +123,8 @@ rule jati_inference:
             --model {wildcards.model} \
             --params {params.paras} \
             --gap-handling {wildcards.gap} \
-            --seed {wildcards.seed}         
+            --seed {wildcards.seed} \
+            -l info
         """
 
 rule jati_cleanup:
