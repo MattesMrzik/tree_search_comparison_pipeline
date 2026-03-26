@@ -1,5 +1,5 @@
 # Tree Generation Parameters
-species: [10]
+species: [50]
 birth_death_rates:
   - [1.0, 2.0]
 seeds: [1]
@@ -15,6 +15,12 @@ tkf_mu: 0.11
 tkf_r: 0.8
 max_insertion_length: 50
 simulate_tkf_path: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
+
+# JATI Tree Inference Parameters
+jati_path: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
+jati_models: ["jc69"]
+jati_paras: [0.3, 0.4, 0.5]
+gap_handling_strategies: ["PIP", "TKF92"]
 
 # Paths
 python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"

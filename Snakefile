@@ -6,6 +6,7 @@ import os
 EVOLVER = config["evolver_path"]
 SIMULATE_TKF = config["simulate_tkf_path"]
 PYTHON = config["python_bin"]
+JATI = config["jati_path"]
 
 # Extracting parameters
 SPECIES = config["species"]
@@ -13,6 +14,11 @@ BIRTH_DEATH_PAIRS = config["birth_death_rates"]
 SEEDS = config["seeds"]
 SAMPLING = config["sampling_fraction"]
 MUTATION = config["mutation_rate"]
+
+# JATI Parameters
+JATI_MODELS = config["jati_models"]
+JATI_PARAS = config["jati_paras"]
+GAP_STRATEGIES = config["gap_handling_strategies"]
 
 # TKF92 Parameters
 LAMBDA = config["tkf_lambda"]
@@ -23,7 +29,7 @@ MAX_INS = config["max_insertion_length"]
 rule all:
     input:
         [
-            f"results/msas/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/msa.fasta"
+            f"results/msas/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/tree_plot.png"
             for s in SPECIES
             for pair in BIRTH_DEATH_PAIRS
             for f in SAMPLING
@@ -31,12 +37,14 @@ rule all:
             for seed in SEEDS
         ],
         [
-            f"results/msas/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/tree_plot.png"
+            f"results/inference/s{s}_b{pair[0]}_d{pair[1]}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/reconstructed_tree.nwk"
             for s in SPECIES
             for pair in BIRTH_DEATH_PAIRS
             for f in SAMPLING
             for m in MUTATION
             for seed in SEEDS
+            for model in JATI_MODELS
+            for gap in GAP_STRATEGIES
         ]
 
 rule generate_tree:
@@ -96,4 +104,28 @@ rule visualize_msa_tree:
     shell:
         """
         {params.py_bin} {params.script} --tree-file {input.tree} --output-file {output.plot}
+        """
+
+rule jati_inference:
+    input:
+        msa = "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/msa.fasta"
+    output:
+        tree = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati/reconstructed_tree.nwk"
+    params:
+        bin = JATI,
+        paras = " ".join(map(str, JATI_PARAS)),
+        out_folder = "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
+    shell:
+        """
+        mkdir -p {params.out_folder}
+        {params.bin} \
+            --out-folder {params.out_folder} \
+            --seq-file {input.msa} \
+            --model {wildcards.model} \
+            --params {params.paras} \
+            --gap-handling {wildcards.gap} \
+            --seed {wildcards.seed}
+        
+        # JATI output file name fix if necessary
+        mv {params.out_folder}/*.nwk {output.tree} 2>/dev/null 
         """
