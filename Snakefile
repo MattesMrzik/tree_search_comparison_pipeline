@@ -110,60 +110,41 @@ rule visualize_msa_tree:
         {params.py_bin} {params.script} --tree-file {input.tree} --output-file {output.plot}
         """
 
-# We use this checkpoint since jati's output directory is not deterministic and we need to wait for it to be created before we can move files around
-checkpoint jati_inference:
+rule jati_inference:
     input:
         msa = f"{SIM_DIR}/msa.fasta"
-    output:
-        outdir = directory(f"{INF_DIR}/out")
-    params:
-        bin = JATI,
-        paras = " ".join(map(str, JATI_PARAS)),
-        log_level = "warn",
-        max_iterations = MAX_ITERATIONS
-    shell:
-        """
-        mkdir -p {output.outdir}
-        {params.bin} \
-            --out-folder {output.outdir} \
-            --seq-file {input.msa} \
-            --model {wildcards.model} \
-            --params {params.paras} \
-            --gap-handling {wildcards.gap} \
-            --seed {wildcards.seed} \
-            -l {params.log_level} \
-            --max-iterations {params.max_iterations} 
-        """
-
-def get_jati_output(wildcards):
-    outdir = checkpoints.jati_inference.get(**wildcards).output.outdir
-    dirs = glob.glob(f"{outdir}/*_out/")
-    if not dirs:
-        raise ValueError(f"JATI failed to produce an output directory in {outdir}")
-    return dirs[0]
-
-rule jati_cleanup:
-    input:
-        dir = get_jati_output
     output:
         start_tree = f"{INF_DIR}/start_tree.newick",
         final_tree = f"{INF_DIR}/final_tree.newick",
         logl = f"{INF_DIR}/logl.out",
         log = f"{INF_DIR}/log.txt"
     params:
-        target_dir = f"{INF_DIR}"
+        bin = JATI,
+        paras = " ".join(map(str, JATI_PARAS)),
+        log_level = "warn",
+        max_iterations = MAX_ITERATIONS,
+        out_base = f"{INF_DIR}",
+        run_id = "jati_run"
     shell:
         """
-        mv {input.dir}/* {params.target_dir}/
-
-        # striping the time stamp prefix
-        for f in {params.target_dir}/[0-9]*_*; do
-            base="${{f##*/}}"
-            mv "$f" "{params.target_dir}/${{base#*_}}"
-        done
+        mkdir -p {params.out_base}
+        {params.bin} \
+            --out-folder {params.out_base} \
+            --seq-file {input.msa} \
+            --model {wildcards.model} \
+            --params {params.paras} \
+            --gap-handling {wildcards.gap} \
+            --seed {wildcards.seed} \
+            -l {params.log_level} \
+            --max-iterations {params.max_iterations} \
+            --no-timestamp
         
-        mv {params.target_dir}/tree.newick {output.final_tree}
-        mv {params.target_dir}/*.log {output.log}
+        # With --no-timestamp, JATI creates INF_DIR/jati_run/
+        # and files within have no prefix (e.g. tree.newick, logl.out, etc.)
+        mv {params.out_base}/{params.run_id}_out/{params.run_id}_start_tree.newick {output.start_tree}
+        mv {params.out_base}/{params.run_id}_out/{params.run_id}_tree.newick {output.final_tree}
+        mv {params.out_base}/{params.run_id}_out/{params.run_id}_logl.out {output.logl}
+        mv {params.out_base}/{params.run_id}_out/{params.run_id}.log {output.log}
         """
 
 rule calculate_distances:
