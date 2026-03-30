@@ -114,7 +114,10 @@ rule jati_inference:
     input:
         msa = f"{SIM_DIR}/msa.fasta"
     output:
-        raw_out = directory(f"{INF_DIR}/jati_run_out")
+        start_tree = f"{INF_DIR}/jati_run_out/jati_run_start_tree.newick",
+        final_tree = f"{INF_DIR}/jati_run_out/jati_run_tree.newick",
+        logl = f"{INF_DIR}/jati_run_out/jati_run_logl.out",
+        log = f"{INF_DIR}/jati_run_out/jati_run.log"
     params:
         bin = JATI,
         paras = " ".join(map(str, JATI_PARAS)),
@@ -138,20 +141,21 @@ rule jati_inference:
 
 rule jati_cleanup:
     input:
-        raw_out = f"{INF_DIR}/jati_run_out"
+        start_tree = f"{INF_DIR}/jati_run_out/jati_run_start_tree.newick",
+        final_tree = f"{INF_DIR}/jati_run_out/jati_run_tree.newick",
+        logl = f"{INF_DIR}/jati_run_out/jati_run_logl.out",
+        log = f"{INF_DIR}/jati_run_out/jati_run.log"
     output:
         start_tree = f"{INF_DIR}/start_tree.newick",
         final_tree = f"{INF_DIR}/final_tree.newick",
         logl = f"{INF_DIR}/logl.out",
         log = f"{INF_DIR}/log.txt"
-    params:
-        run_id = "jati_run"
     shell:
         """
-        mv {input.raw_out}/{params.run_id}_start_tree.newick {output.start_tree}
-        mv {input.raw_out}/{params.run_id}_tree.newick {output.final_tree}
-        mv {input.raw_out}/{params.run_id}_logl.out {output.logl}
-        mv {input.raw_out}/{params.run_id}.log {output.log}
+        mv {input.start_tree} {output.start_tree}
+        mv {input.final_tree} {output.final_tree}
+        mv {input.logl} {output.logl}
+        mv {input.log} {output.log}
         """
 
 rule calculate_distances:
