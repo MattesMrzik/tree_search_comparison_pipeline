@@ -57,7 +57,9 @@ def main():
             
             tree_params = parts[inf_idx + 1]
             tree_png_path = os.path.join("results", "trees", f"{tree_params}.nwk.png")
-            row["tree_visualization"] = tree_png_path
+            # Create a file:// URL that is clickable in many terminal emulators and spreadsheet apps
+            abs_png_path = os.path.abspath(tree_png_path)
+            row["tree_visualization"] = f"file://{abs_png_path}"
         except (ValueError, IndexError):
             msa_path = None
             row["tree_visualization"] = "NA"
