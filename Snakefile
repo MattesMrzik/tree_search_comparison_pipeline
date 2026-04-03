@@ -28,13 +28,6 @@ TREE_PATH = config["tree_path"]
 MSA_PATH = config["msa_dir_path"]
 INF_PATH = config["inf_dir_path"]
 
-# Build actual Snakemake paths
-# We use the raw strings from config. Snakemake will resolve the wildcards 
-# (like {s}, {b}, {msa_sim_tool}) during the DAG construction.
-TREE_PATH = config["tree_path"]
-MSA_PATH = config["msa_dir_path"]
-INF_PATH = config["inf_dir_path"]
-
 # Helper functions for directory expansion
 def get_all_inference_dirs():
     dirs = []
@@ -123,12 +116,19 @@ rule generate_tree:
         tail -n 1 evolver.out > {output}
         """
 
+# Helper functions for rule-specific path generation
+def get_msa_output(tool_name):
+    """Returns the tool-specific MSA directory template."""
+    return MSA_PATH.replace("{msa_sim_tool}", tool_name).replace(
+        "{tool_params}", MSA_SIM_TOOLS[tool_name]["params_path_snipped"]
+    )
+
 rule simulate_tkf_alignment:
     input:
         tree = TREE_PATH
     output:
-        msa = MSA_PATH.replace("{msa_sim_tool}", "tkf").replace("{tool_params}", MSA_SIM_TOOLS["tkf"]["params_path_snipped"]) + "/msa.fasta",
-        tree_copy = MSA_PATH.replace("{msa_sim_tool}", "tkf").replace("{tool_params}", MSA_SIM_TOOLS["tkf"]["params_path_snipped"]) + "/tree.nwk"
+        msa = get_msa_output("tkf") + "/msa.fasta",
+        tree_copy = get_msa_output("tkf") + "/tree.nwk"
     params:
         bin = MSA_SIM_TOOLS["tkf"]["binary_path"],
         out_dir = lambda wildcards, output: os.path.dirname(output.msa)
@@ -149,8 +149,8 @@ rule simulate_iqtree_alignment:
     input:
         tree = TREE_PATH
     output:
-        msa = MSA_PATH.replace("{msa_sim_tool}", "iqtree").replace("{tool_params}", MSA_SIM_TOOLS["iqtree"]["params_path_snipped"]) + "/msa.fasta",
-        tree_copy = MSA_PATH.replace("{msa_sim_tool}", "iqtree").replace("{tool_params}", MSA_SIM_TOOLS["iqtree"]["params_path_snipped"]) + "/tree.nwk"
+        msa = get_msa_output("iqtree") + "/msa.fasta",
+        tree_copy = get_msa_output("iqtree") + "/tree.nwk"
     params:
         bin = MSA_SIM_TOOLS["iqtree"]["binary_path"],
         model = MSA_SIM_TOOLS["iqtree"]["model"],
@@ -158,7 +158,13 @@ rule simulate_iqtree_alignment:
     shell:
         """
         mkdir -p {params.out_dir}
-        {params.bin} --alisim {params.out_dir}/msa -m {params.model} -t {input.tree} --indel {wildcards.ir},{wildcards.ip} --seed {wildcards.seed} --out-format fasta
+        {params.bin} \
+            --alisim {params.out_dir}/msa \
+            -m {params.model} \
+            -t {input.tree} \
+            --indel {wildcards.ir},{wildcards.ip} \
+            --seed {wildcards.seed} \
+            --out-format fasta
         mv {params.out_dir}/msa.fa {output.msa}
         cp {input.tree} {output.tree_copy}
         """
