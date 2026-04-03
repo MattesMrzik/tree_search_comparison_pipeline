@@ -1,35 +1,45 @@
-# Tree Generation Parameters
+# General
+seeds: [1]
+python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
+
+# PAML Tree Generation Parameters
+evolver_path: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
 species: [5]
 birth_death_rates:
   - [1.0, 2.0]
-seeds: [1, 2, 3, 4, 5]
-
 sampling_fraction: [0.25]
 mutation_rate: [1.0]
+tree_path: "results/trees/{tree_params_path_snippet}.nwk"
+tree_params_path_snippet: "s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}"
+tree_match: 's(?P<species>\d+)_b(?P<birth_rate>[\d.]+)_d(?P<death_rate>[\d.]+)_f(?P<sampling_fraction>[\d.]+)_m(?P<mutation_rate>[\d.]+)_seed(?P<seed>\d+)'
 
-evolver_path: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
-
-# TKF92 Simulation Parameters
-tkf_lambda: 0.1
-tkf_mu: 0.11
-tkf_r: 0.8
-# simulation params need to be added here when the tkf simulation code can accept them
-max_insertion_length: 50
-simulate_tkf_path: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
+# MSA Simulation Tools & Their Parameters
+msa_dir_path: "results/msas/{tree_params}/{msa_sim_tool}/{tool_params}"
+msa_sim_tools:
+  tkf:
+    binary_path: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
+    lambda: 0.1
+    mu: 0.11
+    r: 0.8
+    max_ins: 50
+    params_path_snipped: "l{lambda}_mu{mu}_r{r}_max{max_ins}"
+    match_regex: 'tkf/l(?P<tkf_lambda>[\d.]+)_mu(?P<tkf_mu>[\d.]+)_r(?P<tkf_r>[\d.]+)_max(?P<max_ins>\d+)'
+  
+  iqtree:
+    binary_path: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
+    model: "JC"
+    indel_params:
+      - [0.03, 0.1]
+    params_path_snipped: "ir{ir}_ip{ip}"
+    match_regex: 'iqtree/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)'
 
 # JATI Tree Inference Parameters
-jati_path: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
+jati_path_snippet: "{model}_{gap}_jati"
+inf_match: '(?P<jati_model>[^/]+)_(?P<gap_strategy>[^/]+)_jati'
+inf_dir_path: "results/inference/{tree_params}/{msa_sim_tool}/{tool_params}/{jati_path_snippet}"
+jati_binary_path: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
 jati_models: ["jc69"]
-jati_paras: [0.3, 0.4, 0.5]
+jati_params: [0.3, 0.4, 0.5]
 gap_handling_strategies: ["PIP", "TKF92"]
 max_iterations: 5
 
-# Paths
-python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
-sim_dir: "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}"
-inf_dir: "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{model}_{gap}_jati"
-
-# Regex for parsing paths in aggregate_results.py
-# Use named groups (?P<name>...) to define the fields to extract
-sim_match: 's(?P<species>\d+)_b(?P<birth_rate>[\d.]+)_d(?P<death_rate>[\d.]+)_f(?P<sampling_fraction>[\d.]+)_m(?P<mutation_rate>[\d.]+)_seed(?P<seed>\d+)'
-inf_match: '(?P<jati_model>[^/]+)_(?P<gap_strategy>[^/]+)_jati'

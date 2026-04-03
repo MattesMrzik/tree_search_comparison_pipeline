@@ -5,44 +5,58 @@ import csv
 
 def main():
     config = snakemake.params.sn_config
-    sim_regex = config["sim_match"]
+    # Generic regexes for shared path components
+    tree_regex = config["tree_match"]
     inf_regex = config["inf_match"]
+    
+    # We'll collect all possible fieldnames to ensure consistent TSV columns
+    all_rows = []
+    all_keys = set()
 
-    global_params = {
-        "tkf_lambda": config.get("tkf_lambda", "NA"),
-        "tkf_mu": config.get("tkf_mu", "NA"),
-        "tkf_r": config.get("tkf_r", "NA"),
-        "max_insertion_length": config.get("max_insertion_length", "NA"),
-        "max_iterations": config.get("max_iterations", "NA")
-    }
-
-    rows = []
     for d in snakemake.params.dirs:
-        row = extract_params_from_inf_path(d, sim_regex, inf_regex)
-        row.update(global_params)
+        row = {}
+        # 1. Extract shared tree parameters from path
+        tree_match = re.search(tree_regex, d)
+        if tree_match:
+            row.update(tree_match.groupdict())
+
+        # 2. Extract tool-specific simulation parameters
+        tool_found = False
+        for tool_name, tool_conf in config["msa_sim_tools"].items():
+            sim_regex = tool_conf["match_regex"]
+            match = re.search(sim_regex, d)
+            if match:
+                row["msa_sim_tool"] = tool_name
+                row.update(match.groupdict())
+                tool_found = True
+                break
+        
+        # 3. Extract JATI params from path
+        inf_match = re.search(inf_regex, d)
+        if inf_match:
+            row.update(inf_match.groupdict())
+        
+        # 3. Load results from files
         row.update(get_distances_from_json(d))
         row["runtime_seconds"] = get_last_line_value(os.path.join(d, "time.txt"))
         row["log_likelihood"] = get_last_line_value(os.path.join(d, "logl.out"))
-        rows.append(row)
-    write_rows_to_tsv(snakemake.output.tsv_path, rows)
+        
+        # Add to collection
+        all_rows.append(row)
+        all_keys.update(row.keys())
 
-def write_rows_to_tsv(output_path, rows):
-    """
-    Writes a list of dictionaries to a TSV file.
-    Uses the keys from the first row as headers.
-    """
+    # 4. Write to TSV with a stable header
+    write_rows_to_tsv(snakemake.output.tsv_path, all_rows, sorted(list(all_keys)))
+
+def write_rows_to_tsv(output_path, rows, fieldnames):
     if not rows:
         return
-    fieldnames = list(rows[0].keys())
     with open(output_path, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter='\t')
+        writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter='\t', extrasaction='ignore', restval='NA')
         writer.writeheader()
         writer.writerows(rows)
 
 def get_distances_from_json(dir_path):
-    """
-    Loads all metrics from distances.json if it exists.
-    """
     dist_path = os.path.join(dir_path, "distances.json")
     if os.path.exists(dist_path):
         try:
@@ -52,24 +66,7 @@ def get_distances_from_json(dir_path):
             pass
     return {}
 
-def extract_params_from_inf_path(path, sim_regex, inf_regex):
-    """
-    Parses parameters from paths using regex with named groups from config.
-    """
-    params = {}
-    
-    sim_match = re.search(sim_regex, path)
-    if sim_match:
-        params.update(sim_match.groupdict())
-    
-    inf_match = re.search(inf_regex, path)
-    if inf_match:
-        params.update(inf_match.groupdict())
-        
-    return params
-
 def get_last_line_value(file_path):
-    """Reads the last line of a file and returns it as a float if possible. Might be slow for large files"""
     if not os.path.exists(file_path):
         return "NA"
     try:
@@ -80,7 +77,6 @@ def get_last_line_value(file_path):
     except (ValueError, IndexError):
         pass
     return "NA"
-
 
 if __name__ == "__main__":
     main()
