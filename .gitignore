@@ -1,3 +1,6 @@
 .DS_Store
 .snakemake/
 results/
+__pycache__/
+*.py[cod]
+*$py.class
