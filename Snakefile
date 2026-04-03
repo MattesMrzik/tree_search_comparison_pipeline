@@ -24,9 +24,13 @@ MAX_ITERATIONS = config["max_iterations"]
 MSA_SIM_TOOLS = config["msa_sim_tools"]
 
 # Path Templates from config
-TREE_PATH = config["tree_path"]
-MSA_PATH = config["msa_dir_path"]
-INF_PATH = config["inf_dir_path"]
+# Resolve the tree_params and jati_path_snippet once so they're available to all paths
+TREE_PARAMS_PATH_SNIPPET = config["tree_params_path_snippet"]
+JATI_PATH_SNIPPET = config["jati_path_snippet"]
+
+TREE_PATH = config["tree_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
+MSA_PATH = config["msa_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
+INF_PATH = config["inf_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET).replace("{jati_path_snippet}", JATI_PATH_SNIPPET)
 
 # Helper functions for directory expansion
 def get_all_dirs(template):

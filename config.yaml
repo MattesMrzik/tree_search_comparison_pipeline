@@ -10,11 +10,11 @@ birth_death_rates:
 sampling_fraction: [0.25]
 mutation_rate: [1.0]
 tree_params_path_snippet: "s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}"
-tree_path: "results/trees/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}.nwk"
+tree_path: "results/trees/{tree_params_path_snippet}.nwk"
 tree_match: 's(?P<species>\d+)_b(?P<birth_rate>[\d.]+)_d(?P<death_rate>[\d.]+)_f(?P<sampling_fraction>[\d.]+)_m(?P<mutation_rate>[\d.]+)_seed(?P<seed>\d+)'
 
 # MSA Simulation Tools & Their Parameters
-msa_dir_path: "results/msas/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{msa_sim_tool}/{tool_params}"
+msa_dir_path: "results/msas/{tree_params_path_snippet}/{msa_sim_tool}/{tool_params}"
 msa_sim_tools:
   tkf:
     binary_path: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
@@ -36,7 +36,7 @@ msa_sim_tools:
 # JATI Tree Inference Parameters
 jati_path_snippet: "{model}_{gap}_jati"
 inf_match: '(?P<jati_model>[^/]+)_(?P<gap_strategy>[^/]+)_jati'
-inf_dir_path: "results/inference/s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}/{msa_sim_tool}/{tool_params}/{model}_{gap}_jati"
+inf_dir_path: "results/inference/{tree_params_path_snippet}/{msa_sim_tool}/{tool_params}/{jati_path_snippet}"
 jati_binary_path: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
 jati_models: ["jc69"]
 jati_params: [0.3, 0.4, 0.5]
