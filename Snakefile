@@ -29,80 +29,40 @@ MSA_PATH = config["msa_dir_path"]
 INF_PATH = config["inf_dir_path"]
 
 # Helper functions for directory expansion
-def get_all_inference_dirs():
+def get_all_dirs(template):
     dirs = []
     for tool_name, tool_conf in MSA_SIM_TOOLS.items():
+        # Get all parameter combinations for this tool
         if tool_name == "tkf":
-            # Use a dictionary to avoid 'lambda' keyword collision
-            fmt_dict = {
-                "lambda": tool_conf["lambda"],
-                "mu": tool_conf["mu"],
-                "r": tool_conf["r"],
-                "max_ins": tool_conf["max_ins"]
-            }
-            t_params = tool_conf["params_path_snipped"].format(**fmt_dict)
-            dirs.extend(expand(INF_PATH, 
-                              msa_sim_tool=[tool_name],
-                              s=SPECIES, 
-                              b=[p[0] for p in BIRTH_DEATH_PAIRS], 
-                              d=[p[1] for p in BIRTH_DEATH_PAIRS], 
-                              f=SAMPLING, m=MUTATION, 
-                              seed=SEEDS,
-                              tool_params=[t_params],
-                              model=JATI_MODELS, 
-                              gap=GAP_STRATEGIES))
+            param_sets = [tool_conf["params_path_snipped"].format(**{
+                "lambda": tool_conf["lambda"], "mu": tool_conf["mu"], 
+                "r": tool_conf["r"], "max_ins": tool_conf["max_ins"]
+            })]
         elif tool_name == "iqtree":
-            for p in tool_conf["indel_params"]:
-                t_params = tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1])
-                dirs.extend(expand(INF_PATH, 
-                                  msa_sim_tool=[tool_name],
-                                  s=SPECIES, 
-                                  b=[p_bd[0] for p_bd in BIRTH_DEATH_PAIRS], 
-                                  d=[p_bd[1] for p_bd in BIRTH_DEATH_PAIRS], 
-                                  f=SAMPLING, m=MUTATION, 
-                                  seed=SEEDS,
-                                  tool_params=[t_params],
-                                  model=JATI_MODELS, 
-                                  gap=GAP_STRATEGIES))
-    return dirs
-
-def get_all_sim_dirs():
-    dirs = []
-    for tool_name, tool_conf in MSA_SIM_TOOLS.items():
-        if tool_name == "tkf":
-            fmt_dict = {
-                "lambda": tool_conf["lambda"],
-                "mu": tool_conf["mu"],
-                "r": tool_conf["r"],
-                "max_ins": tool_conf["max_ins"]
-            }
-            t_params = tool_conf["params_path_snipped"].format(**fmt_dict)
-            dirs.extend(expand(MSA_PATH, 
-                              msa_sim_tool=[tool_name],
-                              s=SPECIES, 
-                              b=[p[0] for p in BIRTH_DEATH_PAIRS], 
-                              d=[p[1] for p in BIRTH_DEATH_PAIRS], 
-                              f=SAMPLING, m=MUTATION, 
-                              seed=SEEDS,
-                              tool_params=[t_params]))
-        elif tool_name == "iqtree":
-            for p in tool_conf["indel_params"]:
-                t_params = tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1])
-                dirs.extend(expand(MSA_PATH, 
-                                  msa_sim_tool=[tool_name],
-                                  s=SPECIES, 
-                                  b=[p_bd[0] for p_bd in BIRTH_DEATH_PAIRS], 
-                                  d=[p_bd[1] for p_bd in BIRTH_DEATH_PAIRS], 
-                                  f=SAMPLING, m=MUTATION, 
-                                  seed=SEEDS,
-                                  tool_params=[t_params]))
+            param_sets = [tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1]) 
+                         for p in tool_conf["indel_params"]]
+        
+        # Expand template with tree wildcards and tool-specific params
+        exp_dict = {
+            "msa_sim_tool": [tool_name],
+            "tool_params": param_sets,
+            "s": SPECIES, "b": [p[0] for p in BIRTH_DEATH_PAIRS], 
+            "d": [p[1] for p in BIRTH_DEATH_PAIRS], 
+            "f": SAMPLING, "m": MUTATION, "seed": SEEDS
+        }
+        
+        # Add JATI wildcards if present in template
+        if "{model}" in template:
+            exp_dict.update({"model": JATI_MODELS, "gap": GAP_STRATEGIES})
+            
+        dirs.extend(expand(template, **exp_dict))
     return dirs
 
 rule all:
     input:
         "results/summary.tsv",
-        [f"{d}/distances.json" for d in get_all_inference_dirs()],
-        [f"{d}/tree_plot.png" for d in get_all_sim_dirs()]
+        [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
+        [f"{d}/tree_plot.png" for d in get_all_dirs(MSA_PATH)]
 
 rule generate_tree:
     output:
@@ -253,13 +213,13 @@ rule calculate_time:
 
 rule aggregate_summary:
     input:
-        [f"{d}/distances.json" for d in get_all_inference_dirs()],
-        [f"{d}/time.txt" for d in get_all_inference_dirs()],
-        [f"{d}/logl.out" for d in get_all_inference_dirs()]
+        [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
+        [f"{d}/time.txt" for d in get_all_dirs(INF_PATH)],
+        [f"{d}/logl.out" for d in get_all_dirs(INF_PATH)]
     output:
         tsv_path = "results/summary.tsv"
     params:
-        dirs = get_all_inference_dirs(),
+        dirs = get_all_dirs(INF_PATH),
         sn_config = config
     script:
         "scripts/aggregate_results.py"
