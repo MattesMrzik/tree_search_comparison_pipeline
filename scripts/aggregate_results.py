@@ -9,6 +9,9 @@ def main():
     tree_regex = config["tree_match"]
     inf_regex = config["inf_match"]
     
+    # Cache for MSA stats to avoid redundant I/O
+    msa_cache = {}
+
     # We'll collect all possible fieldnames to ensure consistent TSV columns
     all_rows = []
     all_keys = set()
@@ -21,14 +24,12 @@ def main():
             row.update(tree_match.groupdict())
 
         # 2. Extract tool-specific simulation parameters
-        tool_found = False
         for tool_name, tool_conf in config["msa_sim_tools"].items():
             sim_regex = tool_conf["match_regex"]
             match = re.search(sim_regex, d)
             if match:
                 row["msa_sim_tool"] = tool_name
                 row.update(match.groupdict())
-                tool_found = True
                 break
         
         # 3. Extract JATI params from path
@@ -36,17 +37,43 @@ def main():
         if inf_match:
             row.update(inf_match.groupdict())
         
-        # 3. Load results from files
+        # 4. Load results from files
         row.update(get_distances_from_json(d))
         row["runtime_seconds"] = get_last_line_value(os.path.join(d, "time.txt"))
         row["log_likelihood"] = get_last_line_value(os.path.join(d, "logl.out"))
-        row["alignment_length"] = get_alignment_length(d)
+        
+        # Determine MSA path - it is relative to the results directory structure
+        # d is results/inference/{tree_params}/{msa_sim_tool}/{tool_params}/{jati_path_snippet}
+        # MSA is results/msas/{tree_params}/{msa_sim_tool}/{tool_params}/msa.fasta
+        # So we go up 3 levels from jati_path_snippet to tree_params, then into msas
+        parts = d.split(os.sep)
+        # Assuming path starts with 'results/inference/...'
+        # We find 'inference' and swap it for 'msas', then remove the last part (jati_path)
+        try:
+            inf_idx = parts.index("inference")
+            msa_parts = list(parts)
+            msa_parts[inf_idx] = "msas"
+            msa_path = os.sep.join(msa_parts[:-1] + ["msa.fasta"])
+        except (ValueError, IndexError):
+            msa_path = None
+
+        row["alignment_length"] = "NA"
+        row["gap_percentage"] = "NA"
+
+        if msa_path and os.path.exists(msa_path):
+            row["alignment_length"] = get_fasta_length(msa_path)
+            
+            if msa_path not in msa_cache:
+                msa_cache[msa_path] = get_gap_stats(msa_path)
+            
+            gap_stats = msa_cache[msa_path]
+            row["gap_percentage"] = gap_stats["gap_percentage"]
         
         # Add to collection
         all_rows.append(row)
         all_keys.update(row.keys())
 
-    # 4. Write to TSV with a stable header
+    # 6. Write to TSV with a stable header
     write_rows_to_tsv(snakemake.output.tsv_path, all_rows, sorted(list(all_keys)))
 
 def write_rows_to_tsv(output_path, rows, fieldnames):
@@ -67,11 +94,8 @@ def get_distances_from_json(dir_path):
             pass
     return {}
 
-def get_alignment_length(dir_path):
-    # The MSA is located two levels up from the inference folder: 
-    # results/inference/{tree}/{tool}/{params}/{jati}/
-    # results/msas/{tree}/{tool}/{params}/msa.fasta
-    msa_path = os.path.join(os.path.dirname(dir_path), "msa.fasta")
+def get_fasta_length(msa_path):
+    """Returns the length of the first sequence in the FASTA."""
     if os.path.exists(msa_path):
         try:
             with open(msa_path, 'r') as f:
@@ -80,6 +104,26 @@ def get_alignment_length(dir_path):
         except Exception:
             pass
     return "NA"
+
+def get_gap_stats(msa_path):
+    """Calculates gap count and percentage by scanning the MSA file."""
+    if not os.path.exists(msa_path):
+        return {"gap_count": "NA", "gap_percentage": "NA"}
+    try:
+        total_chars = 0
+        gaps = 0
+        with open(msa_path, 'r') as f:
+            for line in f:
+                if not line.startswith('>'):
+                    seq = line.strip()
+                    total_chars += len(seq)
+                    gaps += seq.count('-')
+        
+        pct = (gaps / total_chars * 100) if total_chars > 0 else 0
+        return {"gap_count": gaps, "gap_percentage": round(pct, 2)}
+    except Exception:
+        pass
+    return {"gap_count": "NA", "gap_percentage": "NA"}
 
 def get_last_line_value(file_path):
     if not os.path.exists(file_path):
