@@ -41,6 +41,11 @@ def main():
         start_dt = datetime.strptime(start_time_str, fmt)
         end_dt = datetime.strptime(end_time_str, fmt)
         
+        # If the end time is earlier than the start time, it likely crossed midnight
+        if end_dt < start_dt:
+            from datetime import timedelta
+            end_dt += timedelta(days=1)
+            
         duration = end_dt - start_dt
         
         with open(output_time, 'w') as out:
