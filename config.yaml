@@ -4,12 +4,12 @@
 # the directory names of the inference outputs into the final summary TSV.
 
 # General
-seeds: [1]
+seeds: [1, 2, 3, 4, 5]
 python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
 
 # PAML Tree Generation Parameters
 evolver_path: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
-species: [64, 32, 16]
+species: [128, 64, 32, 16]
 birth_death_rates:
   - [1.0, 2.0]
 sampling_fraction: [0.25]

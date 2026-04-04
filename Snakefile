@@ -33,6 +33,13 @@ TREE_PATH = config["tree_path"].replace("{tree_params_path_snippet}", TREE_PARAM
 MSA_PATH = config["msa_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
 INF_PATH = config["inf_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET).replace("{jati_path_snippet}", JATI_PATH_SNIPPET)
 
+
+
+# TODO if msas get simulated then if they are finished, then jati is run already, even though msa simulation is not finised, and not all msas lens are considered during the priority calcutlation
+# we could first call the simulation rule and then if that is finished call the inference rulw
+# 
+
+
 # Helper functions for priority and path generation
 def get_all_dirs(template):
     dirs = []
