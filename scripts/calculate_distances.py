@@ -17,10 +17,10 @@ def calculate_distances(true_tree_path, final_tree_path, start_tree_path, output
     final_kf = dendropy.calculate.treecompare.euclidean_distance(true_tree, final_tree)
 
     results = {
-        "robinson_foulds": float(final_rf),
-        "kuhner_felsenstein": float(final_kf),
-        "start_robinson_foulds": "NA",
-        "start_kuhner_felsenstein": "NA"
+        "rf": float(final_rf),
+        "kf": float(final_kf),
+        "start_rf": "NA",
+        "start_kf": "NA"
     }
 
     # Calculate distances for start tree if provided
@@ -29,8 +29,8 @@ def calculate_distances(true_tree_path, final_tree_path, start_tree_path, output
         start_rf = dendropy.calculate.treecompare.symmetric_difference(true_tree, start_tree_obj)
         start_kf = dendropy.calculate.treecompare.euclidean_distance(true_tree, start_tree_obj)
         
-        results["start_robinson_foulds"] = float(start_rf)
-        results["start_kuhner_felsenstein"] = float(start_kf)
+        results["start_rf"] = float(start_rf)
+        results["start_kf"] = float(start_kf)
     
     with open(output_path, 'w') as f:
         json.dump(results, f, indent=4)

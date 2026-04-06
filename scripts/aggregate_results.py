@@ -43,7 +43,7 @@ def main():
         # 4. Load results from files
         row.update(get_distances_from_json(d))
         row["runtime_seconds"] = get_last_line_value(os.path.join(d, "time.txt"))
-        row["log_likelihood"] = get_last_line_value(os.path.join(d, "logl.out"))
+        row["logl"] = get_last_line_value(os.path.join(d, "logl.out"))
         
         # Determine MSA path - it is relative to the results directory structure
         # d is results/inference/{tree_params}/{msa_sim_tool}/{tool_params}/{inference_tool}/{inf_params}
@@ -65,16 +65,16 @@ def main():
             tree_png_path = os.path.join("results", "trees", f"{tree_params}.nwk.png")
             # Create a file:// URL that is clickable in many terminal emulators and spreadsheet apps
             abs_png_path = os.path.abspath(tree_png_path)
-            row["tree_visualization"] = f"[tree](file://{abs_png_path})"
+            row["true"] = f"[tree](file://{abs_png_path})"
         except (ValueError, IndexError):
             msa_path = None
-            row["tree_visualization"] = "NA"
+            row["true"] = "NA"
 
-        row["alignment_length"] = "NA"
-        row["gap_percentage"] = "NA"
+        row["msa_len"] = "NA"
+        row["gap%"] = "NA"
 
         if msa_path and os.path.exists(msa_path):
-            row["alignment_length"] = get_fasta_length(msa_path)
+            row["msa_len"] = get_fasta_length(msa_path)
             # Create a file:// URL for the MSA file
             abs_msa_path = os.path.abspath(msa_path)
             row["msa"] = f"[msa](file://{abs_msa_path})"
@@ -83,7 +83,7 @@ def main():
                 msa_cache[msa_path] = get_gap_stats(msa_path)
             
             gap_stats = msa_cache[msa_path]
-            row["gap_percentage"] = gap_stats["gap_percentage"]
+            row["gap%"] = gap_stats["gap_percentage"]
         
         # Add to collection
         all_rows.append(row)
@@ -95,15 +95,13 @@ def main():
         # Global
         "seed", 
         # Tree Generation
-        "species", "birth_rate", "death_rate", "sampling_fraction", "mutation_rate",
+        "species", "birth_rate", "death_rate", "sampling_fraction", "mutation_rate", "true",
         # MSA Simulation
-        "msa_sim_tool", "tkf_lambda", "tkf_mu", "tkf_r", "max_ins", "ir", "ip", "alignment_length", "gap_percentage", "msa",
+        "msa_sim_tool", "tkf_lambda", "tkf_mu", "tkf_r", "max_ins", "ir", "ip", "msa_len", "gap%", "msa",
         # Inference
-        "inference_tool", "model", "gap_strategy", "log_likelihood", "runtime_seconds",
+        "inference_tool", "model", "gap_strategy", "logl", "runtime_seconds",
         # Results/Metrics
-        "robinson_foulds", "kuhner_felsenstein", "start_robinson_foulds", "start_kuhner_felsenstein",
-        # Visuals
-        "tree_visualization"
+        "rf", "kf", "start_rf", "start_kf",
     ]
     
     # Ensure any unexpected keys are still included at the end
