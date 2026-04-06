@@ -35,10 +35,8 @@ INF_PATH = config["inf_dir_path"].replace("{tree_params_path_snippet}", TREE_PAR
 
 
 
-# TODO if msas get simulated then if they are finished, then jati is run already, even though msa simulation is not finised, and not all msas lens are considered during the priority calcutlation
-# we could first call the simulation rule and then if that is finished call the inference rulw
-# 
-
+# TODO if msas get simulated then if they are finished, then jati is run already, even though msa simulation is not finished, and not all msas lens are considered during the priority calculation
+# we could first call the simulation rule and then if that is finished call the inference rule
 
 # Helper functions for priority and path generation
 def get_all_dirs(template):
@@ -167,6 +165,7 @@ rule simulate_iqtree_alignment:
             --indel {wildcards.ir},{wildcards.ip} \
             --seed {wildcards.seed} \
             --out-format fasta
+            --no-unaligned
         mv {params.out_dir}/msa.fa {output.msa}
         cp {input.tree} {output.tree_copy}
         """

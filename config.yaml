@@ -34,6 +34,7 @@ msa_sim_tools:
     binary_path: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
     model: "JC"
     indel_params: # (insertion_rate, deletion_rate)
+    # For simulations with indels, we applied empirical parameters (Graur et al. 1989; Gu and Li 1995; Cartwright 2009) with the insertion and deletion rates of 0.03 and 0.09, respectively, and the indel-lengths drawn from a truncated Zipfian (Power-Law) distribution (Fletcher and Yang 2009) (a = 1.7; max = 50). alisim paper
       - [0.01, 0.03]
     params_path_snipped: "ir{ir}_ip{ip}"
     match_regex: 'iqtree/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)'
