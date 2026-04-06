@@ -38,10 +38,11 @@ def get_all_dirs(template):
         if tool_name == "tkf":
             param_sets = [tool_conf["params_path_snipped"].format(**{
                 "lambda": tool_conf["lambda"], "mu": tool_conf["mu"], 
-                "r": tool_conf["r"], "max_ins": tool_conf["max_ins"]
+                "r": tool_conf["r"], "max_ins": tool_conf["max_ins"],
+                "root_length": tool_conf["root_length"]
             })]
         elif tool_name == "alisim":
-            param_sets = [tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1]) 
+            param_sets = [tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1], root_length=tool_conf["root_length"]) 
                          for p in tool_conf["indel_params"]]
         
         for inf_tool_name, inf_conf in INF_TOOLS.items():
@@ -149,6 +150,7 @@ rule simulate_tkf_alignment:
             --mu {wildcards.mu} \
             --r {wildcards.r} \
             --max-insertion-length {wildcards.max_ins} \
+            --root-length {wildcards.root_length} \
             --seed {wildcards.seed} \
             --output-dir {params.out_dir}
         cp {input.tree} {output.tree_copy}
@@ -172,6 +174,7 @@ rule simulate_alisim_alignment:
             -m {params.model} \
             -t {input.tree} \
             --indel {wildcards.ir},{wildcards.ip} \
+            --length {wildcards.root_length} \
             --seed {wildcards.seed} \
             --out-format fasta \
             --no-unaligned 

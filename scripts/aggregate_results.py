@@ -97,7 +97,7 @@ def main():
         # Tree Generation
         "species", "birth_rate", "death_rate", "sampling_fraction", "mutation_rate", "true",
         # MSA Simulation
-        "msa_sim_tool", "tkf_lambda", "tkf_mu", "tkf_r", "max_ins", "ir", "ip", "msa_len", "gap%", "msa",
+        "msa_sim_tool", "root_length", "tkf_lambda", "tkf_mu", "tkf_r", "max_ins", "ir", "ip", "msa_len", "gap%", "msa",
         # Inference
         "inference_tool", "model", "gap_strategy", "logl", "runtime_seconds",
         # Results/Metrics
