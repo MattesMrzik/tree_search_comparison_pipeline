@@ -31,6 +31,29 @@ INF_PATH = config["inf_dir_path"].replace("{tree_params_path_snippet}", TREE_PAR
 # we could first call the simulation rule and then if that is finished call the inference rule
 
 # Helper functions for priority and path generation
+def get_all_msa_dirs():
+    dirs = []
+    for tool_name, tool_conf in MSA_SIM_TOOLS.items():
+        if tool_name == "tkf":
+            param_sets = [tool_conf["params_path_snipped"].format(**{
+                "lambda": tool_conf["lambda"], "mu": tool_conf["mu"], 
+                "r": tool_conf["r"], "max_ins": tool_conf["max_ins"],
+                "root_length": rl
+            }) for rl in tool_conf["root_lengths"]]
+        elif tool_name == "alisim":
+            param_sets = [tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1], root_length=rl) 
+                         for p in tool_conf["indel_params"] for rl in tool_conf["root_lengths"]]
+        
+        exp_dict = {
+            "msa_sim_tool": [tool_name],
+            "tool_params": param_sets,
+            "s": SPECIES, "b": [p[0] for p in BIRTH_DEATH_PAIRS], 
+            "d": [p[1] for p in BIRTH_DEATH_PAIRS], 
+            "f": SAMPLING, "m": MUTATION, "seed": SEEDS
+        }
+        dirs.extend(expand(MSA_PATH, **exp_dict))
+    return dirs
+
 def get_all_dirs(template):
     dirs = []
     for tool_name, tool_conf in MSA_SIM_TOOLS.items():
@@ -72,6 +95,7 @@ def get_all_dirs(template):
 rule all:
     input:
         "results/summary.tsv",
+        "results/msa_summary.tsv",
         "/Users/mrzi/Seafile/phd_obsidian/notes/pipeline_out/summary_table.md",
         [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
 
@@ -279,11 +303,23 @@ rule calculate_time:
     shell:
         "{params.py_bin} {params.script} {input.log} {output.time_file}"
 
+rule aggregate_msas:
+    input:
+        [f"{d}/msa.fasta" for d in get_all_msa_dirs()]
+    output:
+        tsv_path = "results/msa_summary.tsv"
+    params:
+        msa_dirs = get_all_msa_dirs(),
+        sn_config = config
+    script:
+        "scripts/aggregate_msas.py"
+
 rule aggregate_summary:
     input:
-        [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
-        [f"{d}/time.txt" for d in get_all_dirs(INF_PATH)],
-        [f"{d}/logl.out" for d in get_all_dirs(INF_PATH)]
+        msa_summary = "results/msa_summary.tsv",
+        dist_files = [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
+        time_files = [f"{d}/time.txt" for d in get_all_dirs(INF_PATH)],
+        logl_files = [f"{d}/logl.out" for d in get_all_dirs(INF_PATH)]
     output:
         tsv_path = "results/summary.tsv"
     params:

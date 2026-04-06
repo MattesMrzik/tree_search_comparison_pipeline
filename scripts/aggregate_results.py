@@ -3,94 +3,121 @@ import os
 import re
 import csv
 
+def load_msa_stats(msa_summary_path):
+    """Loads MSA stats from the pre-aggregated msa_summary.tsv into a lookup dictionary."""
+    lookup = {}
+    if os.path.exists(msa_summary_path):
+        try:
+            with open(msa_summary_path, 'r') as f:
+                reader = csv.DictReader(f, delimiter='\t')
+                for row in reader:
+                    lookup[row["msa_dir"]] = row
+        except Exception:
+            pass
+    return lookup
+
+def get_tree_params(path, tree_regex):
+    match = re.search(tree_regex, path)
+    return match.groupdict() if match else {}
+
+def get_msa_sim_params(path, msa_sim_tools_config):
+    for tool_name, tool_conf in msa_sim_tools_config.items():
+        match = re.search(tool_conf["match_regex"], path)
+        if match:
+            params = {"msa_sim_tool": tool_name}
+            params.update(match.groupdict())
+            return params
+    return {}
+
+def get_inference_params(path, inference_tools_config):
+    for inf_tool_name, inf_conf in inference_tools_config.items():
+        match = re.search(inf_conf["match_regex"], path)
+        if match:
+            params = {"inference_tool": inf_tool_name}
+            params.update(match.groupdict())
+            return params
+    return {}
+
+def get_msa_stats_and_link(path, msa_stats_lookup):
+    parts = path.split(os.sep)
+    res = {}
+    try:
+        inf_idx = parts.index("inference")
+        msa_parts = list(parts)
+        # Convert the inference path to the corresponding MSA directory path by replacing 'inference' with 'msas'
+        msa_parts[inf_idx] = "msas"
+        # Directory containing msa.fasta (backtracking two levels from the tool-specific inference folders)
+        msa_dir_path = os.sep.join(msa_parts[:-2])
+        msa_file_path = os.path.join(msa_dir_path, "msa.fasta")
+        
+        # Get MSA stats from lookup table
+        stats = msa_stats_lookup.get(msa_dir_path, {})
+        res["msa_len"] = stats.get("msa_len")
+        res["gap%"] = stats.get("gap%")
+        
+        # File URL
+        abs_msa_path = os.path.abspath(msa_file_path)
+        res["msa"] = f"[msa](file://{abs_msa_path})"
+    except (ValueError, IndexError):
+        pass
+    return res
+
+def get_tree_visual_link(path):
+    parts = path.split(os.sep)
+    try:
+        inf_idx = parts.index("inference")
+        tree_params = parts[inf_idx + 1]
+        tree_png_path = os.path.join("results", "trees", f"{tree_params}.nwk.png")
+        abs_png_path = os.path.abspath(tree_png_path)
+        return {"true": f"[tree](file://{abs_png_path})"}
+    except (ValueError, IndexError):
+        return {}
+
+def get_distances_from_json(dir_path):
+    dist_path = os.path.join(dir_path, "distances.json")
+    if os.path.exists(dist_path):
+        try:
+            with open(dist_path, 'r') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def get_last_line_value(file_path):
+    if not os.path.exists(file_path):
+        return "NA"
+    try:
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+            if lines:
+                return float(lines[-1].strip())
+    except (ValueError, IndexError):
+        pass
+    return "NA"
+
 def main():
     config = snakemake.params.sn_config
-    # Generic regexes for shared path components
-    tree_regex = config["tree_match"]
+    msa_stats_lookup = load_msa_stats(snakemake.input.msa_summary)
     
-    # Cache for MSA stats to avoid redundant I/O
-    msa_cache = {}
-
     # We'll collect all possible fieldnames to ensure consistent TSV columns
     all_rows = []
     all_keys = set()
 
     for d in snakemake.params.dirs:
         row = {}
-        # 1. Extract shared tree parameters from path
-        tree_match = re.search(tree_regex, d)
-        if tree_match:
-            row.update(tree_match.groupdict())
-
-        # 2. Extract tool-specific simulation parameters
-        for tool_name, tool_conf in config["msa_sim_tools"].items():
-            sim_regex = tool_conf["match_regex"]
-            match = re.search(sim_regex, d)
-            if match:
-                row["msa_sim_tool"] = tool_name
-                row.update(match.groupdict())
-                break
-        
-        # 3. Extract inference params from path based on tool
-        for inf_tool_name, inf_conf in config["inference_tools"].items():
-            inf_regex = inf_conf["match_regex"]
-            match = re.search(inf_regex, d)
-            if match:
-                row["inference_tool"] = inf_tool_name
-                row.update(match.groupdict())
-                break
-        
-        # 4. Load results from files
+        row.update(get_tree_params(d, config["tree_match"]))
+        row.update(get_msa_sim_params(d, config["msa_sim_tools"]))
+        row.update(get_inference_params(d, config["inference_tools"]))
+        row.update(get_msa_stats_and_link(d, msa_stats_lookup))
+        row.update(get_tree_visual_link(d))
         row.update(get_distances_from_json(d))
         row["runtime_seconds"] = get_last_line_value(os.path.join(d, "time.txt"))
         row["logl"] = get_last_line_value(os.path.join(d, "logl.out"))
-        
-        # Determine MSA path - it is relative to the results directory structure
-        # d is results/inference/{tree_params}/{msa_sim_tool}/{tool_params}/{inference_tool}/{inf_params}
-        # MSA is results/msas/{tree_params}/{msa_sim_tool}/{tool_params}/msa.fasta
-        # Tree PNG is results/trees/{tree_params}.nwk.png
-        parts = d.split(os.sep)
-        # Assuming path starts with 'results/inference/...'
-        # We find 'inference' and swap it for 'msas', then remove the last part (jati_path)
-        try:
-            inf_idx = parts.index("inference")
-            msa_parts = list(parts)
-            msa_parts[inf_idx] = "msas"
-            # The structure is .../inference/tree_params/msa_sim_tool/tool_params/inference_tool/inf_params
-            # We want .../msas/tree_params/msa_sim_tool/tool_params/msa.fasta
-            # So we need to remove two levels (inference_tool and inf_params)
-            msa_path = os.sep.join(msa_parts[:-2] + ["msa.fasta"])
-            
-            tree_params = parts[inf_idx + 1]
-            tree_png_path = os.path.join("results", "trees", f"{tree_params}.nwk.png")
-            # Create a file:// URL that is clickable in many terminal emulators and spreadsheet apps
-            abs_png_path = os.path.abspath(tree_png_path)
-            row["true"] = f"[tree](file://{abs_png_path})"
-        except (ValueError, IndexError):
-            msa_path = None
-            row["true"] = "NA"
 
-        row["msa_len"] = "NA"
-        row["gap%"] = "NA"
-
-        if msa_path and os.path.exists(msa_path):
-            row["msa_len"] = get_fasta_length(msa_path)
-            # Create a file:// URL for the MSA file
-            abs_msa_path = os.path.abspath(msa_path)
-            row["msa"] = f"[msa](file://{abs_msa_path})"
-            
-            if msa_path not in msa_cache:
-                msa_cache[msa_path] = get_gap_stats(msa_path)
-            
-            gap_stats = msa_cache[msa_path]
-            row["gap%"] = gap_stats["gap_percentage"]
-        
         # Add to collection
         all_rows.append(row)
         all_keys.update(row.keys())
 
-    # 6. Write to TSV with a stable header
-    # Define column order: Global -> Tree -> MSA -> Inference -> Metrics -> Visuals
     column_order = [
         # Global
         "seed", 
@@ -118,68 +145,7 @@ def write_rows_to_tsv(output_path, rows, fieldnames):
         writer.writeheader()
         writer.writerows(rows)
 
-def get_distances_from_json(dir_path):
-    dist_path = os.path.join(dir_path, "distances.json")
-    if os.path.exists(dist_path):
-        try:
-            with open(dist_path, 'r') as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {}
 
-def get_fasta_length(msa_path):
-    """Returns the length of the first sequence in the FASTA."""
-    if os.path.exists(msa_path):
-        try:
-            with open(msa_path, 'r') as f:
-                seq = ""
-                for line in f:
-                    line = line.strip()
-                    if not line:
-                        continue
-                    if line.startswith(">"):
-                        if seq:
-                            return len(seq)
-                    else:
-                        seq += line
-                return len(seq)
-        except Exception:
-            pass
-    return "NA"
-
-def get_gap_stats(msa_path):
-    """Calculates gap count and percentage by scanning the MSA file."""
-    if not os.path.exists(msa_path):
-        return {"gap_count": "NA", "gap_percentage": "NA"}
-    try:
-        total_chars = 0
-        gaps = 0
-        with open(msa_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith(">"):
-                    continue
-                total_chars += len(line)
-                gaps += line.count('-')
-        
-        pct = (gaps / total_chars * 100) if total_chars > 0 else 0
-        return {"gap_count": gaps, "gap_percentage": round(pct, 2)}
-    except Exception:
-        pass
-    return {"gap_count": "NA", "gap_percentage": "NA"}
-
-def get_last_line_value(file_path):
-    if not os.path.exists(file_path):
-        return "NA"
-    try:
-        with open(file_path, 'r') as f:
-            lines = f.readlines()
-            if lines:
-                return float(lines[-1].strip())
-    except (ValueError, IndexError):
-        pass
-    return "NA"
 
 if __name__ == "__main__":
     main()
