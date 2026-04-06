@@ -4,12 +4,13 @@
 # the directory names of the inference outputs into the final summary TSV.
 
 # General
-seeds: [1, 2, 3, 4, 5]
+seeds: [1]
 python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
 
 # PAML Tree Generation Parameters
 evolver_path: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
-species: [128, 64, 32, 16]
+# species: [128, 64, 32, 16]
+species: [8]
 birth_death_rates:
   - [1.0, 2.0]
 sampling_fraction: [0.25]
@@ -30,22 +31,30 @@ msa_sim_tools:
     params_path_snipped: "l{lambda}_mu{mu}_r{r}_max{max_ins}"
     match_regex: 'tkf/l(?P<tkf_lambda>[\d.]+)_mu(?P<tkf_mu>[\d.]+)_r(?P<tkf_r>[\d.]+)_max(?P<max_ins>\d+)'
   
-  iqtree:
+  alisim:
     binary_path: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
     model: "JC"
     indel_params: # (insertion_rate, deletion_rate)
     # For simulations with indels, we applied empirical parameters (Graur et al. 1989; Gu and Li 1995; Cartwright 2009) with the insertion and deletion rates of 0.03 and 0.09, respectively, and the indel-lengths drawn from a truncated Zipfian (Power-Law) distribution (Fletcher and Yang 2009) (a = 1.7; max = 50). alisim paper
       - [0.01, 0.03]
     params_path_snipped: "ir{ir}_ip{ip}"
-    match_regex: 'iqtree/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)'
+    match_regex: 'alisim/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)'
 
-# JATI Tree Inference Parameters
-jati_path_snippet: "{model}_{gap}_jati"
-inf_match: '(?P<jati_model>[^/]+)_(?P<gap_strategy>[^/]+)_jati'
-inf_dir_path: "results/inference/{tree_params_path_snippet}/{msa_sim_tool}/{tool_params}/{jati_path_snippet}"
-jati_binary_path: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
-jati_models: ["jc69"]
-jati_params: [0.3, 0.4, 0.5]
-gap_handling_strategies: ["PIP", "TKF92"]
-max_iterations: 5
+# Inference Tools & Their Parameters
+inference_tools:
+  jati:
+    binary_path: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
+    models: ["jc69"]
+    params: [0.3, 0.4, 0.5]
+    gap_strategies: ["PIP", "TKF92"]
+    max_iterations: 5
+    path_snippet: "{model}_{gap}"
+    match_regex: 'jati/(?P<model>[^/]+)_(?P<gap_strategy>[^/]+)'
+  iqtree:
+    binary_path: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
+    models: ["JC"]
+    path_snippet: "{model}"
+    match_regex: 'iqtree/(?P<model>[^/]+)'
+
+inf_dir_path: "results/inference/{tree_params_path_snippet}/{msa_sim_tool}/{tool_params}/{inference_tool}/{inf_params}"
 

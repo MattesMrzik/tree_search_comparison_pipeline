@@ -6,7 +6,6 @@ from scripts.utils.snakemake_helpers import get_msa_length
 # Path to common tools
 EVOLVER = config["evolver_path"]
 PYTHON = config["python_bin"]
-JATI = config["jati_binary_path"]
 
 # Tree Generation Parameters
 SPECIES = config["species"]
@@ -15,24 +14,17 @@ SEEDS = config["seeds"]
 SAMPLING = config["sampling_fraction"]
 MUTATION = config["mutation_rate"]
 
-# JATI Inference Parameters
-JATI_MODELS = config["jati_models"]
-JATI_PARA_LIST = config["jati_params"]
-GAP_STRATEGIES = config["gap_handling_strategies"]
-MAX_ITERATIONS = config["max_iterations"]
-
-# Tool Specific Configurations
+# Inference Tools & Parameters
+INF_TOOLS = config["inference_tools"]
 MSA_SIM_TOOLS = config["msa_sim_tools"]
 
 # Path Templates from config
-# Resolve the tree_params and jati_path_snippet once so they're available to all paths
+# Resolve the tree_params once so they're available to all paths
 TREE_PARAMS_PATH_SNIPPET = config["tree_params_path_snippet"]
-JATI_PATH_SNIPPET = config["jati_path_snippet"]
 
 TREE_PATH = config["tree_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
 MSA_PATH = config["msa_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
-INF_PATH = config["inf_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET).replace("{jati_path_snippet}", JATI_PATH_SNIPPET)
-
+INF_PATH = config["inf_dir_path"].replace("{tree_params_path_snippet}", TREE_PARAMS_PATH_SNIPPET)
 
 
 # TODO if msas get simulated then if they are finished, then jati is run already, even though msa simulation is not finished, and not all msas lens are considered during the priority calculation
@@ -48,24 +40,32 @@ def get_all_dirs(template):
                 "lambda": tool_conf["lambda"], "mu": tool_conf["mu"], 
                 "r": tool_conf["r"], "max_ins": tool_conf["max_ins"]
             })]
-        elif tool_name == "iqtree":
+        elif tool_name == "alisim":
             param_sets = [tool_conf["params_path_snipped"].format(ir=p[0], ip=p[1]) 
                          for p in tool_conf["indel_params"]]
         
-        # Expand template with tree wildcards and tool-specific params
-        exp_dict = {
-            "msa_sim_tool": [tool_name],
-            "tool_params": param_sets,
-            "s": SPECIES, "b": [p[0] for p in BIRTH_DEATH_PAIRS], 
-            "d": [p[1] for p in BIRTH_DEATH_PAIRS], 
-            "f": SAMPLING, "m": MUTATION, "seed": SEEDS
-        }
-        
-        # Add JATI wildcards if present in template
-        if "{model}" in template:
-            exp_dict.update({"model": JATI_MODELS, "gap": GAP_STRATEGIES})
+        for inf_tool_name, inf_conf in INF_TOOLS.items():
+            # Build inference parameters
+            if inf_tool_name == "jati":
+                inf_params = expand(inf_conf["path_snippet"], 
+                                    model=inf_conf["models"], 
+                                    gap=inf_conf["gap_strategies"])
+            elif inf_tool_name == "iqtree":
+                inf_params = expand(inf_conf["path_snippet"], 
+                                    model=inf_conf["models"])
+
+            # Expand template with tree wildcards, tool-specific params, and inference params
+            exp_dict = {
+                "msa_sim_tool": [tool_name],
+                "tool_params": param_sets,
+                "inference_tool": [inf_tool_name],
+                "inf_params": inf_params,
+                "s": SPECIES, "b": [p[0] for p in BIRTH_DEATH_PAIRS], 
+                "d": [p[1] for p in BIRTH_DEATH_PAIRS], 
+                "f": SAMPLING, "m": MUTATION, "seed": SEEDS
+            }
             
-        dirs.extend(expand(template, **exp_dict))
+            dirs.extend(expand(template, **exp_dict))
     return dirs
 
 rule all:
@@ -119,8 +119,16 @@ rule visualize_tree:
 # Helper functions for rule-specific path generation
 def get_msa_output(tool_name):
     """Returns the tool-specific MSA directory template."""
+    tool_conf = MSA_SIM_TOOLS[tool_name]
     return MSA_PATH.replace("{msa_sim_tool}", tool_name).replace(
-        "{tool_params}", MSA_SIM_TOOLS[tool_name]["params_path_snipped"]
+        "{tool_params}", tool_conf["params_path_snipped"]
+    )
+
+def get_inf_output(tool_name):
+    """Returns the tool-specific inference directory template."""
+    tool_conf = INF_TOOLS[tool_name]
+    return INF_PATH.replace("{inference_tool}", tool_name).replace(
+        "{inf_params}", tool_conf["path_snippet"]
     )
 
 rule simulate_tkf_alignment:
@@ -145,15 +153,15 @@ rule simulate_tkf_alignment:
         cp {input.tree} {output.tree_copy}
         """
 
-rule simulate_iqtree_alignment:
+rule simulate_alisim_alignment:
     input:
         tree = TREE_PATH
     output:
-        msa = get_msa_output("iqtree") + "/msa.fasta",
-        tree_copy = get_msa_output("iqtree") + "/tree.nwk"
+        msa = get_msa_output("alisim") + "/msa.fasta",
+        tree_copy = get_msa_output("alisim") + "/tree.nwk"
     params:
-        bin = MSA_SIM_TOOLS["iqtree"]["binary_path"],
-        model = MSA_SIM_TOOLS["iqtree"]["model"],
+        bin = MSA_SIM_TOOLS["alisim"]["binary_path"],
+        model = MSA_SIM_TOOLS["alisim"]["model"],
         out_dir = lambda wildcards, output: os.path.dirname(output.msa)
     shell:
         """
@@ -164,8 +172,8 @@ rule simulate_iqtree_alignment:
             -t {input.tree} \
             --indel {wildcards.ir},{wildcards.ip} \
             --seed {wildcards.seed} \
-            --out-format fasta
-            --no-unaligned
+            --out-format fasta \
+            --no-unaligned 
         mv {params.out_dir}/msa.fa {output.msa}
         cp {input.tree} {output.tree_copy}
         """
@@ -174,18 +182,16 @@ rule jati_inference:
     input:
         msa = MSA_PATH + "/msa.fasta"
     output:
-        start_tree = INF_PATH + "/jati_run_out/jati_run_start_tree.newick",
-        final_tree = INF_PATH + "/jati_run_out/jati_run_tree.newick",
-        logl = INF_PATH + "/jati_run_out/jati_run_logl.out",
-        log = INF_PATH + "/jati_run_out/jati_run.log"
-    priority: 
-        lambda wildcards: (int(wildcards.s) ** 2) * get_msa_length(wildcards, MSA_PATH + "/msa.fasta")
+        start_tree = get_inf_output("jati") + "/jati_run_out/jati_run_start_tree.newick",
+        final_tree = get_inf_output("jati") + "/jati_run_out/jati_run_tree.newick",
+        logl = get_inf_output("jati") + "/jati_run_out/jati_run_logl.out",
+        log = get_inf_output("jati") + "/jati_run_out/jati_run.log"
     params:
-        bin = JATI,
-        paras = " ".join(map(str, JATI_PARA_LIST)),
+        bin = INF_TOOLS["jati"]["binary_path"],
+        paras = " ".join(map(str, INF_TOOLS["jati"]["params"])),
         log_level = "warn",
-        max_iterations = MAX_ITERATIONS,
-        out_base = INF_PATH
+        max_iterations = INF_TOOLS["jati"]["max_iterations"],
+        out_base = get_inf_output("jati")
     shell:
         """
         mkdir -p {params.out_base}
@@ -203,15 +209,15 @@ rule jati_inference:
 
 rule jati_cleanup:
     input:
-        start_tree = INF_PATH + "/jati_run_out/jati_run_start_tree.newick",
-        final_tree = INF_PATH + "/jati_run_out/jati_run_tree.newick",
-        logl = INF_PATH + "/jati_run_out/jati_run_logl.out",
-        log = INF_PATH + "/jati_run_out/jati_run.log"
+        start_tree = get_inf_output("jati") + "/jati_run_out/jati_run_start_tree.newick",
+        final_tree = get_inf_output("jati") + "/jati_run_out/jati_run_tree.newick",
+        logl = get_inf_output("jati") + "/jati_run_out/jati_run_logl.out",
+        log = get_inf_output("jati") + "/jati_run_out/jati_run.log"
     output:
-        start_tree = INF_PATH + "/start_tree.newick",
-        final_tree = INF_PATH + "/final_tree.newick",
-        logl = INF_PATH + "/logl.out",
-        log = INF_PATH + "/log.txt"
+        start_tree = get_inf_output("jati") + "/start_tree.newick",
+        final_tree = get_inf_output("jati") + "/final_tree.newick",
+        logl = get_inf_output("jati") + "/logl.out",
+        log = get_inf_output("jati") + "/log.txt"
     shell:
         """
         mv {input.start_tree} {output.start_tree}
@@ -220,18 +226,43 @@ rule jati_cleanup:
         mv {input.log} {output.log}
         """
 
+rule iqtree_inference:
+    input:
+        msa = MSA_PATH + "/msa.fasta"
+    output:
+        final_tree = get_inf_output("iqtree") + "/final_tree.newick",
+        log = get_inf_output("iqtree") + "/log.txt",
+        logl = get_inf_output("iqtree") + "/logl.out"
+    params:
+        bin = INF_TOOLS["iqtree"]["binary_path"],
+        out_dir = lambda wildcards, output: os.path.dirname(output.final_tree),
+    shell:
+        """
+        mkdir -p {params.out_dir}
+        {params.bin} -s {input.msa} -m {wildcards.model} --prefix {params.out_dir}/iqtree -nt AUTO --seed {wildcards.seed}
+        mv {params.out_dir}/iqtree.treefile {output.final_tree}
+        mv {params.out_dir}/iqtree.log {output.log}
+        grep "Optimal log-likelihood:" {output.log} | sed 's/.*: //' > {output.logl}
+        """
+
 rule calculate_distances:
     input:
         true_tree = MSA_PATH + "/tree.nwk",
         final_tree = INF_PATH + "/final_tree.newick",
-        start_tree = INF_PATH + "/start_tree.newick"
     output:
         dist_file = INF_PATH + "/distances.json"
     params:
         script = "scripts/calculate_distances.py",
-        py_bin = PYTHON
+        py_bin = PYTHON,
+        start_tree = lambda wildcards, input: os.path.join(os.path.dirname(input.final_tree), "start_tree.newick")
     shell:
-        "{params.py_bin} {params.script} --true-tree {input.true_tree} --final-tree {input.final_tree} --start-tree {input.start_tree} --output {output.dist_file}"
+        """
+        CMD="{params.py_bin} {params.script} --true-tree {input.true_tree} --final-tree {input.final_tree} --output {output.dist_file}"
+        if [ -f "{params.start_tree}" ]; then
+            CMD="$CMD --start-tree {params.start_tree}"
+        fi
+        $CMD
+        """
 
 rule calculate_time:
     input:

@@ -7,7 +7,6 @@ def main():
     config = snakemake.params.sn_config
     # Generic regexes for shared path components
     tree_regex = config["tree_match"]
-    inf_regex = config["inf_match"]
     
     # Cache for MSA stats to avoid redundant I/O
     msa_cache = {}
@@ -32,10 +31,14 @@ def main():
                 row.update(match.groupdict())
                 break
         
-        # 3. Extract JATI params from path
-        inf_match = re.search(inf_regex, d)
-        if inf_match:
-            row.update(inf_match.groupdict())
+        # 3. Extract inference params from path based on tool
+        for inf_tool_name, inf_conf in config["inference_tools"].items():
+            inf_regex = inf_conf["match_regex"]
+            match = re.search(inf_regex, d)
+            if match:
+                row["inference_tool"] = inf_tool_name
+                row.update(match.groupdict())
+                break
         
         # 4. Load results from files
         row.update(get_distances_from_json(d))
@@ -43,7 +46,7 @@ def main():
         row["log_likelihood"] = get_last_line_value(os.path.join(d, "logl.out"))
         
         # Determine MSA path - it is relative to the results directory structure
-        # d is results/inference/{tree_params}/{msa_sim_tool}/{tool_params}/{jati_path_snippet}
+        # d is results/inference/{tree_params}/{msa_sim_tool}/{tool_params}/{inference_tool}/{inf_params}
         # MSA is results/msas/{tree_params}/{msa_sim_tool}/{tool_params}/msa.fasta
         # Tree PNG is results/trees/{tree_params}.nwk.png
         parts = d.split(os.sep)
@@ -53,7 +56,10 @@ def main():
             inf_idx = parts.index("inference")
             msa_parts = list(parts)
             msa_parts[inf_idx] = "msas"
-            msa_path = os.sep.join(msa_parts[:-1] + ["msa.fasta"])
+            # The structure is .../inference/tree_params/msa_sim_tool/tool_params/inference_tool/inf_params
+            # We want .../msas/tree_params/msa_sim_tool/tool_params/msa.fasta
+            # So we need to remove two levels (inference_tool and inf_params)
+            msa_path = os.sep.join(msa_parts[:-2] + ["msa.fasta"])
             
             tree_params = parts[inf_idx + 1]
             tree_png_path = os.path.join("results", "trees", f"{tree_params}.nwk.png")
@@ -109,8 +115,17 @@ def get_fasta_length(msa_path):
     if os.path.exists(msa_path):
         try:
             with open(msa_path, 'r') as f:
-                f.readline() # skip header
-                return len(f.readline().strip())
+                seq = ""
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    if line.startswith(">"):
+                        if seq:
+                            return len(seq)
+                    else:
+                        seq += line
+                return len(seq)
         except Exception:
             pass
     return "NA"
@@ -124,10 +139,11 @@ def get_gap_stats(msa_path):
         gaps = 0
         with open(msa_path, 'r') as f:
             for line in f:
-                if not line.startswith('>'):
-                    seq = line.strip()
-                    total_chars += len(seq)
-                    gaps += seq.count('-')
+                line = line.strip()
+                if not line or line.startswith(">"):
+                    continue
+                total_chars += len(line)
+                gaps += line.count('-')
         
         pct = (gaps / total_chars * 100) if total_chars > 0 else 0
         return {"gap_count": gaps, "gap_percentage": round(pct, 2)}
