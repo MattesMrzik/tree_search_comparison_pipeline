@@ -7,3 +7,4 @@ __pycache__/
 visualize_results.py
 .ipynb_checkpoints/
 back_ups/
+report.html
