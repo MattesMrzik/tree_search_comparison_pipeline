@@ -22,7 +22,7 @@ def main():
         if os.path.exists(msa_path):
             row["msa_len"] = get_fasta_length(msa_path)
             gap_stats = get_gap_stats(msa_path)
-            row["gap%"] = gap_stats["gap_percentage"]
+            row.update(gap_stats)
             
             # File URL
             abs_msa_path = os.path.abspath(msa_path)
@@ -30,6 +30,8 @@ def main():
         else:
             row["msa_len"] = "NA"
             row["gap%"] = "NA"
+            row["gap_col%"] = "NA"
+            row["avg_gap_len"] = "NA"
             row["msa"] = "NA"
             
         all_rows.append(row)
@@ -39,7 +41,7 @@ def main():
     column_order = [
         "seed", "species", "birth_rate", "death_rate", "sampling_fraction", "mutation_rate",
         "msa_sim_tool", "root_length", "tkf_lambda", "tkf_mu", "tkf_r", "max_ins", "ir", "ip",
-        "msa_len", "gap%", "msa", "msa_dir"
+        "msa_len", "gap%", "gap_col%", "avg_gap_len", "msa", "msa_dir"
     ]
     
     final_columns = [col for col in column_order if col in all_keys]
