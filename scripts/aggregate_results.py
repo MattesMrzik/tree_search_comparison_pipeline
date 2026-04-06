@@ -65,7 +65,7 @@ def main():
             tree_png_path = os.path.join("results", "trees", f"{tree_params}.nwk.png")
             # Create a file:// URL that is clickable in many terminal emulators and spreadsheet apps
             abs_png_path = os.path.abspath(tree_png_path)
-            row["tree_visualization"] = f"file://{abs_png_path}"
+            row["tree_visualization"] = f"[tree](file://{abs_png_path})"
         except (ValueError, IndexError):
             msa_path = None
             row["tree_visualization"] = "NA"
@@ -77,7 +77,7 @@ def main():
             row["alignment_length"] = get_fasta_length(msa_path)
             # Create a file:// URL for the MSA file
             abs_msa_path = os.path.abspath(msa_path)
-            row["msa_file"] = f"file://{abs_msa_path}"
+            row["msa"] = f"[msa](file://{abs_msa_path})"
             
             if msa_path not in msa_cache:
                 msa_cache[msa_path] = get_gap_stats(msa_path)
@@ -90,7 +90,27 @@ def main():
         all_keys.update(row.keys())
 
     # 6. Write to TSV with a stable header
-    write_rows_to_tsv(snakemake.output.tsv_path, all_rows, sorted(list(all_keys)))
+    # Define column order: Global -> Tree -> MSA -> Inference -> Metrics -> Visuals
+    column_order = [
+        # Global
+        "seed", 
+        # Tree Generation
+        "species", "birth_rate", "death_rate", "sampling_fraction", "mutation_rate",
+        # MSA Simulation
+        "msa_sim_tool", "tkf_lambda", "tkf_mu", "tkf_r", "max_ins", "ir", "ip", "alignment_length", "gap_percentage", "msa",
+        # Inference
+        "inference_tool", "model", "gap_strategy", "log_likelihood", "runtime_seconds",
+        # Results/Metrics
+        "robinson_foulds", "kuhner_felsenstein", "start_robinson_foulds", "start_kuhner_felsenstein",
+        # Visuals
+        "tree_visualization"
+    ]
+    
+    # Ensure any unexpected keys are still included at the end
+    final_columns = [col for col in column_order if col in all_keys]
+    final_columns += [col for col in sorted(list(all_keys)) if col not in final_columns]
+
+    write_rows_to_tsv(snakemake.output.tsv_path, all_rows, final_columns)
 
 def write_rows_to_tsv(output_path, rows, fieldnames):
     if not rows:

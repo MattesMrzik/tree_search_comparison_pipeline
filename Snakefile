@@ -71,6 +71,7 @@ def get_all_dirs(template):
 rule all:
     input:
         "results/summary.tsv",
+        "/Users/mrzi/Seafile/phd_obsidian/notes/pipeline_out/summary_table.md",
         [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
 
 rule simulate_alignments:
@@ -287,3 +288,14 @@ rule aggregate_summary:
         sn_config = config
     script:
         "scripts/aggregate_results.py"
+
+rule summary_to_obsidian:
+    input:
+        tsv = "results/summary.tsv"
+    output:
+        md = "/Users/mrzi/Seafile/phd_obsidian/notes/pipeline_out/summary_table.md"
+    params:
+        script = "scripts/tsv_to_md.py",
+        py_bin = PYTHON
+    shell:
+        "{params.py_bin} {params.script} {input.tsv} {output.md}"
