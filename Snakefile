@@ -1,7 +1,12 @@
 configfile: "config.yaml"
 
 import os
-from scripts.utils.snakemake_helpers import get_msa_length
+
+# Remove obsolete helper if it exists
+try:
+    from scripts.utils.snakemake_helpers import get_msa_length
+except ImportError:
+    pass
 
 # Path to common tools
 EVOLVER = config["evolver_path"]
@@ -303,7 +308,7 @@ rule calculate_time:
     shell:
         "{params.py_bin} {params.script} {input.log} {output.time_file}"
 
-rule aggregate_msas:
+rule summarize_msas:
     input:
         [f"{d}/msa.fasta" for d in get_all_msa_dirs()]
     output:
@@ -312,9 +317,9 @@ rule aggregate_msas:
         msa_dirs = get_all_msa_dirs(),
         sn_config = config
     script:
-        "scripts/aggregate_msas.py"
+        "scripts/summarize_msas.py"
 
-rule aggregate_summary:
+rule summarize_results:
     input:
         msa_summary = "results/msa_summary.tsv",
         dist_files = [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
@@ -326,7 +331,7 @@ rule aggregate_summary:
         dirs = get_all_dirs(INF_PATH),
         sn_config = config
     script:
-        "scripts/aggregate_results.py"
+        "scripts/summarize_results.py"
 
 rule summary_to_obsidian:
     input:
