@@ -10,7 +10,7 @@ python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
 # PAML Tree Generation Parameters
 evolver_path: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
 # species: [128, 64, 32, 16]
-species: [8]
+species: [8, 16, 32, 64]
 birth_death_rates:
   - [1.0, 2.0]
 sampling_fraction: [0.25]
@@ -25,10 +25,10 @@ msa_sim_tools:
   tkf:
     binary_path: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
     lambda: 0.03
-    mu: 0.031
+    mu: 0.0303
     r: 0.8
     max_ins: 50
-    root_lengths: [500]
+    root_lengths: [500] # we choose params above to get expected 500 length at the root
     params_path_snipped: "l{lambda}_mu{mu}_r{r}_max{max_ins}_len{root_length}"
     match_regex: 'tkf/l(?P<tkf_lambda>[\d.]+)_mu(?P<tkf_mu>[\d.]+)_r(?P<tkf_r>[\d.]+)_max(?P<max_ins>\d+)_len(?P<root_length>\d+)'
   
@@ -37,8 +37,8 @@ msa_sim_tools:
     model: "JC"
     root_lengths: [500]
     indel_params: # (insertion_rate, deletion_rate)
-    # For simulations with indels, we applied empirical parameters (Graur et al. 1989; Gu and Li 1995; Cartwright 2009) with the insertion and deletion rates of 0.03 and 0.09, respectively, and the indel-lengths drawn from a truncated Zipfian (Power-Law) distribution (Fletcher and Yang 2009) (a = 1.7; max = 50). alisim paper
-      - [0.01, 0.03]
+    # For simulations with indels, we applied empirical parameters (Graur et al. 1989; Gu and Li 1995; Cartwright 2009) with the insertion and deletion rates of 0.03 and 0.09, respectively, and the indel-lengths drawn from a truncated Zipfian (Power-Law) distribution (Fletcher and Yang 2009) (a = 1.7; max = 100). alisim paper and these seem to be also the default params for alisim
+      - [0.006, 0.018]
     params_path_snipped: "ir{ir}_ip{ip}_len{root_length}"
     match_regex: 'alisim/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)_len(?P<root_length>\d+)'
 
