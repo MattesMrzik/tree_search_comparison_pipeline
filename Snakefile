@@ -64,7 +64,7 @@ def get_all_msa_dirs():
         dirs.extend(expand(MSA_PATH, **exp_dict))
     return dirs
 
-def get_all_dirs(template):
+def get_all_inference_dirs(template):
     dirs = []
     for tool_name, tool_conf in MSA_SIM_TOOLS.items():
         if tool_name == "tkf":
@@ -109,11 +109,11 @@ rule all:
     input:
         "results/summary.tsv",
         "results/msa_summary.tsv",
-        [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
+        [f"{d}/distances.json" for d in get_all_inference_dirs(INF_PATH)],
 
 rule simulate_alignments:
     input:
-        [f"{d}/msa.fasta" for d in get_all_dirs(MSA_PATH)]
+        [f"{d}/msa.fasta" for d in get_all_inference_dirs(MSA_PATH)]
 
 rule generate_trees:
     input:
@@ -137,8 +137,10 @@ rule generate_tree:
     threads: 1
     resources:
         mem_mb=1024
+    shadow: "minimal"
     shell:
         """
+        {LOAD_PYTHON}
         printf "2\\n{wildcards.s}\\n1 {wildcards.seed} 1\\n{wildcards.b} {wildcards.d} {wildcards.f} {wildcards.m}\\n0\\n" | {EVOLVER} > /dev/null 2>&1
         tail -n 1 evolver.out > {output}
         """
@@ -355,21 +357,21 @@ rule summarize_msas:
 rule summarize_results:
     input:
         msa_summary = "results/msa_summary.tsv",
-        dist_files = [f"{d}/distances.json" for d in get_all_dirs(INF_PATH)],
-        time_files = [f"{d}/time.txt" for d in get_all_dirs(INF_PATH)],
-        logl_files = [f"{d}/logl.out" for d in get_all_dirs(INF_PATH)]
+        dist_files = [f"{d}/distances.json" for d in get_all_inference_dirs(INF_PATH)],
+        time_files = [f"{d}/time.txt" for d in get_all_inference_dirs(INF_PATH)],
+        logl_files = [f"{d}/logl.out" for d in get_all_inference_dirs(INF_PATH)]
     output:
         tsv_path = "results/summary.tsv"
     threads: 1
     resources:
         mem_mb=2048
     params:
-        dirs = get_all_dirs(INF_PATH),
+        dirs = get_all_inference_dirs(INF_PATH),
         sn_config = config
     script:
         "scripts/summarize_results.py"
 
-rule summary_to_obsidian:
+rule obsidian:
     input:
         tsv = "results/summary.tsv"
     output:
