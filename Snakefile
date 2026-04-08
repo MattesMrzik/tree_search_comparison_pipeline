@@ -111,9 +111,10 @@ rule all:
         "results/msa_summary.tsv",
         [f"{d}/distances.json" for d in get_all_inference_dirs(INF_PATH)],
 
-rule simulate_alignments:
+rule simulate_msas:
     input:
-        [f"{d}/msa.fasta" for d in get_all_inference_dirs(MSA_PATH)]
+        [f"{d}/msa.fasta" for d in get_all_inference_dirs(MSA_PATH)],
+        [f"{d}/masa.fasta" for d in get_all_inference_dirs(MSA_PATH)],
 
 rule generate_trees:
     input:
@@ -177,6 +178,7 @@ rule simulate_tkf_alignment:
         tree = TREE_PATH
     output:
         msa = get_msa_output("tkf") + "/msa.fasta",
+        masa = get_msa_output("tkf") + "/masa.fasta",
         tree_copy = get_msa_output("tkf") + "/tree.nwk"
     threads: 1
     resources:
@@ -218,6 +220,30 @@ rule simulate_alisim_alignment:
             --no-unaligned 
         mv $(dirname {output.msa})/msa.fa {output.msa}
         cp {input.tree} {output.tree_copy}
+        """
+
+rule simulate_alisim_ancestral_alignment:
+    input:
+        tree = TREE_PATH
+    output:
+        msa = get_msa_output("alisim") + "/masa.fasta",
+    threads: 1
+    resources:
+        mem_mb=1024
+    shell:
+        """
+        mkdir -p $(dirname {output.msa})
+        {IQTREE3} \
+            --alisim $(dirname {output.msa})/masa \
+            -m {MSA_SIM_TOOLS[alisim][model]} \
+            -t {input.tree} \
+            --indel {wildcards.ir},{wildcards.ip} \
+            --length {wildcards.root_length} \
+            --seed {wildcards.seed} \
+            --out-format fasta \
+            --no-unaligned \
+            --write-all
+        mv $(dirname {output.msa})/masa.fa {output.msa}
         """
 
 rule true_tree_inference:
