@@ -27,10 +27,13 @@ environments:
 # to extract metadata directly from directory names.
 
 # General
+# seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
+# seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
 seeds: [1]
-
 # PAML Tree Generation Parameters
+# species: [8, 16, 32, 64]
 species: [8]
+
 birth_death_rates:
   - [1.0, 2.0]
 sampling_fraction: [0.25]
@@ -55,6 +58,7 @@ msa_sim_tools:
     model: "JC"
     root_lengths: [500]
     indel_params: # (insertion_rate, deletion_rate)
+        # For simulations with indels, we applied empirical parameters (Graur et al. 1989; Gu and Li 1995; Cartwright 2009) with the insertion and deletion rates of 0.03 and 0.09, respectively, and the indel-lengths drawn from a truncated Zipfian (Power-Law) distribution (Fletcher and Yang 2009) (a = 1.7; max = 100). alisim paper and these seem to be also the default params for alisim
       - [0.006, 0.018]
     params_path_snipped: "ir{ir}_ip{ip}_len{root_length}"
     match_regex: 'alisim/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)_len(?P<root_length>\d+)'
@@ -72,8 +76,8 @@ inference_tools:
     models: ["jc69"]
     params: [0.03, 0.04, 0.5]
     gap_move:
-      - ["PIP", "NNI"]
-      - ["PIP", "SPR"]
+      # - ["PIP", "NNI"]
+      # - ["PIP", "SPR"]
       - ["TKF92", "NNI"]
     max_iterations: 5
     path_snippet: "{model}_{gap}_{move_strategy}"
