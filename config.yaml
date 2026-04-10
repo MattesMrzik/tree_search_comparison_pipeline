@@ -27,69 +27,67 @@ environments:
 # to extract metadata directly from directory names.
 
 # General
-seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]
-# seeds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+seeds: [1]
 # PAML Tree Generation Parameters
-species: [8, 16, 32, 64]
-# species: [8]
 
-birth_death_rates:
-  - [1.0, 2.0]
-sampling_fraction: [0.25]
-mutation_rate: [1.0]
-tree_params_path_snippet: "s{s}_b{b}_d{d}_f{f}_m{m}_seed{seed}"
-tree_path: "results/trees/{tree_params_path_snippet}.nwk"
-tree_match: 's(?P<species>\d+)_b(?P<birth_rate>[\d.]+)_d(?P<death_rate>[\d.]+)_f(?P<sampling_fraction>[\d.]+)_m(?P<mutation_rate>[\d.]+)_seed(?P<seed>\d+)'
+tree_path: "results/{seed}/trees/{tree_sim_tool}/{tree_params}.nwk"
+tree_sim_tools:
+  evolver:
+    species: [8]
+    birth&death:
+      - [1.0, 2.0]
+    sampling_fraction: [0.25]
+    mutation_rate: [1.0]
+    path_snippet: "s{species}_b{birth}_d{death}_f{sampling_fraction}_m{mutation_rate}"
+    match_regex: 'evolver/s(?P<species>\d+)_b(?P<birth_rate>[\d.]+)_d(?P<death_rate>[\d.]+)_f(?P<sampling_fraction>[\d.]+)_m(?P<mutation_rate>[\d.]+)'
 
 # MSA Simulation Tools & Their Parameters
-msa_dir_path: "results/msas/{tree_params_path_snippet}/{msa_sim_tool}/{tool_params}"
+msa_dir_path: "results/{seed}/msas/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}"
 msa_sim_tools:
   tkf:
     lambda: 0.03
     mu: 0.0303
     r: 0.8
-    max_ins: 50
-    root_lengths: [500]
-    params_path_snipped: "l{lambda}_mu{mu}_r{r}_max{max_ins}_len{root_length}"
-    match_regex: 'tkf/l(?P<tkf_lambda>[\d.]+)_mu(?P<tkf_mu>[\d.]+)_r(?P<tkf_r>[\d.]+)_max(?P<max_ins>\d+)_len(?P<root_length>\d+)'
-  
+    max_insertion: 50
+    root_length: [500]
+    model: ["JC"]
+    path_snipped: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{root_length}_{model}"
+    match_regex: 'tkf/l(?P<tkf_lambda>[\d.]+)_mu(?P<tkf_mu>[\d.]+)_r(?P<tkf_r>[\d.]+)_max(?P<max_ins>\d+)_len(?P<root_length>\d+)_(?P<model>[^/]+)'
   alisim:
-    model: "JC"
-    root_lengths: [500]
-    indel_params: # (insertion_rate, deletion_rate)
+    model: ["JC"]
+    root_length: [500]
+    ir&ip: # (insertion_rate, deletion_rate)
         # For simulations with indels, we applied empirical parameters (Graur et al. 1989; Gu and Li 1995; Cartwright 2009) with the insertion and deletion rates of 0.03 and 0.09, respectively, and the indel-lengths drawn from a truncated Zipfian (Power-Law) distribution (Fletcher and Yang 2009) (a = 1.7; max = 100). alisim paper and these seem to be also the default params for alisim
       - [0.006, 0.018]
-    params_path_snipped: "ir{ir}_ip{ip}_len{root_length}"
-    match_regex: 'alisim/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)_len(?P<root_length>\d+)'
+    path_snipped: "ir{ir}_ip{ip}_len{root_length}_{model}"
+    match_regex: 'alisim/ir(?P<ir>[\d.]+)_ip(?P<ip>[\d.]+)_len(?P<root_length>\d+)_(?P<model>[^/]+)'
 
-# Inference Tools & Their Parameters
-inference_tools:
-  # TODO: also make a rule for true tree and substitution model and iqtree, 
-  # they should yield the same logl
-  true_tree:
-    model_gap:
+model_param_inf_dir: "results/{seed}/model_inference/{tree_sim_tool}{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}"
+model_parameters_inference:
+  jati_model_param_search:
+    model&gap:
       - ["jc69", "PIP"]
       - ["jc69", "TKF92"]
       - ["jc69", "Missing"]
-      # this is not yet configured to work with NONE
     epsilon: 1e-5
     params: [0.03, 0.04, 0.5]
     path_snippet: "{model}_{gap}"
-    match_regex: 'true_tree/(?P<model>[^/]+)_(?P<gap_strategy>[^/]+)'
+    match_regex: 'jati_model_param_search/(?P<model>[^/]+)_(?P<gap>[^/]+)'
+
+tree_inference_dir: "results/{seed}/tree_inference/{tree_sim_tool}{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}"
+tree_inference_tools:
   jati:
-    models: ["jc69"]
     params: [0.03, 0.04, 0.5]
-    model_gap_move:
+    model&gap&move:
       - ["jc69", "PIP", "NNI"]
       - ["jc69", "PIP", "SPR"]
       - ["jc69", "TKF92", "NNI"]
       - ["NONE", "TKF92", "NNI"]
     max_iterations: 5
-    path_snippet: "{model}_{gap}_{move_strategy}"
-    match_regex: 'jati/(?P<model>[^/]+)_(?P<gap_strategy>[^/]+)_(?P<move_strategy>[^/]+)'
+    path_snippet: "{model}_{gap}_{move}"
+    match_regex: 'jati/(?P<model>[^/]+)_(?P<gap>[^/]+)_(?P<move>[^/]+)'
   iqtree:
     models: ["JC"]
     path_snippet: "{model}"
     match_regex: 'iqtree/(?P<model>[^/]+)'
 
-inf_dir_path: "results/inference/{tree_params_path_snippet}/{msa_sim_tool}/{tool_params}/{inference_tool}/{inf_params}"
