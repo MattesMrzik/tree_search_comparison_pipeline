@@ -2,22 +2,26 @@ import dendropy
 import sys
 
 def calculate_distances(tree_path_a, tree_path_b):
-    tree_paths = [tree_path_a, tree_path_b]
-    
-    trees = read_trees(tree_paths)
-    true_tree = trees[0]
-    final_tree = trees[1]
-    
-    # Calculate distances for final tree
-    final_rf = dendropy.calculate.treecompare.symmetric_difference(true_tree, final_tree)
-    final_kf = dendropy.calculate.treecompare.euclidean_distance(true_tree, final_tree)
+    try: 
+        tree_paths = [tree_path_a, tree_path_b]
+        
+        trees = read_trees(tree_paths)
+        true_tree = trees[0]
+        final_tree = trees[1]
+        
+        # Calculate distances for final tree
+        final_rf = dendropy.calculate.treecompare.symmetric_difference(true_tree, final_tree)
+        final_kf = dendropy.calculate.treecompare.euclidean_distance(true_tree, final_tree)
 
-    results = {
-        "rf": float(final_rf),
-        "kf": float(final_kf),
-    }
+        results = {
+            "rf": float(final_rf),
+            "kf": float(final_kf),
+        }
 
-    return results
+        return results
+    except Exception as e:
+        print(f"Error calculating distances: {e}")
+        return {}
     
 
 def read_trees(tree_paths):

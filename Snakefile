@@ -253,7 +253,7 @@ rule true_tree_inference:
         msa = MSA_PATH + "/msa.fasta",
         tree = MSA_PATH + "/tree.nwk"
     output:
-        final_tree = get_inf_output("true_tree") + "/final_tree.newick",
+        final_tree = get_inf_output("true_tree") + "/final_tree.nwk",
         logl = get_inf_output("true_tree") + "/logl.out",
         log = get_inf_output("true_tree") + "/log.txt"
     threads: 1
@@ -276,7 +276,7 @@ rule true_tree_inference:
             --epsilon {params.epsilon} \
             --seed {wildcards.seed} \
             -l warn --no-timestamp
-        mv {params.out_base}/jati_run_out/jati_run_tree.newick {output.final_tree}
+        mv {params.out_base}/jati_run_out/jati_run_tree.nwk {output.final_tree}
         mv {params.out_base}/jati_run_out/jati_run_logl.out {output.logl}
         mv {params.out_base}/jati_run_out/jati_run.log {output.log}
         """
@@ -288,8 +288,8 @@ rule jati_inference:
     input:
         msa = MSA_PATH + "/msa.fasta"
     output:
-        start_tree = get_inf_output("jati") + "/start_tree.newick",
-        final_tree = get_inf_output("jati") + "/final_tree.newick",
+        start_tree = get_inf_output("jati") + "/start_tree.nwk",
+        final_tree = get_inf_output("jati") + "/final_tree.nwk",
         logl = get_inf_output("jati") + "/logl.out",
         log = get_inf_output("jati") + "/log.txt"
     threads: 1
@@ -314,8 +314,8 @@ rule jati_inference:
             -l warn \
             --max-iterations {params.max_iterations} \
             --no-timestamp
-        mv {params.out_base}/jati_run_out/jati_run_start_tree.newick {output.start_tree}
-        mv {params.out_base}/jati_run_out/jati_run_tree.newick {output.final_tree}
+        mv {params.out_base}/jati_run_out/jati_run_start_tree.nwk {output.start_tree}
+        mv {params.out_base}/jati_run_out/jati_run_tree.nwk {output.final_tree}
         mv {params.out_base}/jati_run_out/jati_run_logl.out {output.logl}
         mv {params.out_base}/jati_run_out/jati_run.log {output.log}
         """
@@ -324,7 +324,7 @@ rule iqtree_inference:
     input:
         msa = MSA_PATH + "/msa.fasta"
     output:
-        final_tree = get_inf_output("iqtree") + "/final_tree.newick",
+        final_tree = get_inf_output("iqtree") + "/final_tree.nwk",
         log = get_inf_output("iqtree") + "/log.txt",
         logl = get_inf_output("iqtree") + "/logl.out"
     threads: 1
