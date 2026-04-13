@@ -89,6 +89,7 @@ def get_tree_path(tool_name):
     tool_conf = config["tree_sim_tools"][tool_name]
     return config["tree_path"].replace("{tree_sim_tool}", tool_name).replace("{tree_params}", tool_conf["path_snippet"])
 
+# e.g. results/msas/{tree_sim_tool}/{tree_params}/tkf/l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{root_length}_{model}/seed{seed}/msa.fasta
 def get_msa_output(tool_name):
     tool_conf = config["msa_sim_tools"][tool_name]
     return config["msa_dir_path"].replace("{msa_sim_tool}", tool_name).replace("{msa_params}", tool_conf["path_snippet"])

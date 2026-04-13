@@ -7,10 +7,11 @@ environments:
     python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
     python_module: "" # Not needed locally
     evolver: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
-    simulate_tkf: "/Users/mrzi/Documents/develop/simulate_tkf/target/debug/simulate_tkf"
+    root_tree: "/Users/mrzi/Documents/develop/bins_using_phylo/root_tree/target/debug/root_tree_and_internal_labels"
+    simulate_tkf: "/Users/mrzi/Documents/develop/bins_using_phylo/simulate_tkf/target/debug/simulate_tkf"
     iqtree3: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
-    model_search_phylo: "/Users/mrzi/Documents/develop/model_search_phylo/target/release/model-search-phylo"
-    jati: "/Users/mrzi/Documents/develop/jati_tkf/JATI/target/debug/jati"
+    model_search_phylo: "/Users/mrzi/Documents/develop/bins_using_phylo/model_search_phylo/target/debug/model-search-phylo"
+    jati: "/Users/mrzi/Documents/develop/bins_using_phylo/jati_tkf/JATI/target/debug/jati"
   hpc:
     python_bin: "python3"
     python_module: ""
@@ -36,19 +37,22 @@ tree_sim_tools:
     birth_death:
       - {birth: 1.0, death: 2.0}
     sampling_fraction: [0.25]
-    mutation_rate: [1.0, 2.0]
+    mutation_rate: [1.0]
     path_snippet: "s{species}_b{birth}_d{death}_f{sampling_fraction}_m{mutation_rate}"
+  iqtree:
+    species: [8]
+    path_snippet: "s{species}"
 
 # MSA Simulation Tools & Their Parameters
 msa_dir_path: "results/msas/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/seed{seed}"
 msa_sim_tools:
   tkf:
-    lambda: 0.03
-    mu: 0.0303
-    r: 0.8
+    lambda: [0.03]
+    mu: [0.0303]
+    r: [0.8]
     max_insertion: 50
     root_length: [500]
-    model: ["JC"]
+    model: ["jc69"] # currently this is hardcoded and this here is only for the path_snippet
     path_snippet: "l{lambda}_mu{mu}_r{r}_max{max_insertion}_len{root_length}_{model}"
   alisim:
     model: ["JC"]
@@ -62,9 +66,11 @@ model_param_inf_dir: "results/model_inference/{tree_sim_tool}/{tree_params}/{msa
 model_parameters_inf_tools:
   jati_model_param_search:
     model_gap:
-      - {model: "jc69", gap: "PIP"}
-      # - {model: "jc69", gap: "TKF92"}
+      # - {model: "jc69", gap: "PIP"}
+      # - {model: "jc69", gap: "TKF92"} # i dont need the subst params search as we have Jc
       # - {model: "jc69", gap: "Missing"}
+      - {model: "NONE", gap: "TKF92"}
+      # -blfix arg to iqtree could be used to check against Missing, i checked one manually and it was the same
     epsilon: 1e-5
     params: [0.03, 0.04, 0.5]
     path_snippet: "{model}_{gap}"
@@ -75,6 +81,8 @@ tree_inf_tools:
     params: [0.03, 0.04, 0.5]
     model_gap_move:
       - {model: "jc69", gap: "PIP", move: "NNI"}
+      - {model: "jc69", gap: "Missing", move: "NNI"}
+      - {model: "jc69", gap: "Missing", move: "SPR"}
       - {model: "jc69", gap: "PIP", move: "SPR"}
       - {model: "jc69", gap: "TKF92", move: "NNI"}
       - {model: "NONE", gap: "TKF92", move: "NNI"}

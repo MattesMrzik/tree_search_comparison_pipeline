@@ -14,6 +14,7 @@ PATHS = config["environments"][ENV]
 
 # Tool Paths from environment-specific config
 EVOLVER = PATHS["evolver"]
+ROOTER = PATHS["root_tree"]
 PYTHON = PATHS["python_bin"]
 PYTHON_MODULE = PATHS.get("python_module", "")
 SIMULATE_TKF = PATHS["simulate_tkf"]
@@ -48,15 +49,16 @@ rule all_msas:
         make_targets(config["msa_dir_path"] + "/msa.fasta", "tree", "msa"),
         make_targets(config["msa_dir_path"] + "/masa.fasta", "tree", "msa")
 
-rule all_model_inferences:
+rule all_model_infs:
     input:
-        make_targets(config["model_param_inf_dir"] + "/logl.out", "tree", "msa", "minf")
+        make_targets(config["model_param_inf_dir"] + "/logl.out", "tree", "msa", "minf"),
+        [f for f in make_targets(config["msa_dir_path"] + "/sim_logl.out", "tree", "msa") if "/tkf/" in f]
 
-rule all_tree_inferences:
+rule all_tree_infs:
     input:
         make_targets(config["tree_inf_dir"] + "/final_tree.nwk", "tree", "msa", "tinf")
 
-rule tree_pngs:
+rule all_tree_pngs:
     input:
         [p.replace(".nwk", ".png") for p in rules.all_trees.input]
 
@@ -64,21 +66,43 @@ rule all:
     input:
         rules.all_trees.input,
         rules.all_msas.input,
-        rules.all_model_inferences.input,
-        rules.all_tree_inferences.input,
+        rules.all_model_infs.input,
+        rules.all_tree_infs.input,
+
+#######################################################################
+#######################################################################
+# TREE
+#######################################################################
+#######################################################################
 
 rule evolver_tree:
     output:
-        tree = get_tree_path("evolver")
+        tree = get_tree_path("evolver"),
+        tree_raw = get_tree_path("evolver") + ".raw",
+        tree_wo= get_tree_path("evolver") + ".wo"
     threads: 1
     resources:
         mem_mb=1024
     shadow: "minimal"
     shell:
         """
-        {LOAD_PYTHON}
         printf "2\\n{wildcards.species}\\n1 {wildcards.seed} 1\\n{wildcards.birth} {wildcards.death} {wildcards.sampling_fraction} {wildcards.mutation_rate}\\n0\\n" | {EVOLVER} > /dev/null 2>&1
-        tail -n 1 evolver.out > {output}
+        tail -n 1 evolver.out > {output.tree}.raw
+        {ROOTER} --i {output.tree_raw} --ow {output.tree} --owo {output.tree_wo}
+        """
+
+rule iqtree_tree:
+    output:
+        tree = get_tree_path("iqtree"),
+        tree_raw = get_tree_path("iqtree") + ".raw",
+        tree_wo= get_tree_path("iqtree") + ".wo"
+    threads: 1
+    resources:
+        mem_mb=1024
+    shell:
+        """
+        {IQTREE3} -r {wildcards.species} {output.tree}.raw -nt 1 --seed {wildcards.seed} -redo
+        {ROOTER} --i {output.tree_raw} --ow {output.tree} --owo {output.tree_wo}
         """
 
 rule tree_png:
@@ -94,6 +118,11 @@ rule tree_png:
         {LOAD_PYTHON}
         {PYTHON} viz/tree/visualize_trees.py --tree-file {input.tree} --output-file {output.plot}
         """
+#######################################################################
+#######################################################################
+# MSA
+#######################################################################
+#######################################################################
 
 rule simulate_tkf_alignment:
     input:
@@ -101,7 +130,7 @@ rule simulate_tkf_alignment:
     output:
         msa = get_msa_output("tkf") + "/msa.fasta",
         masa = get_msa_output("tkf") + "/masa.fasta",
-        tree_copy = get_msa_output("tkf") + "/tree.nwk"
+        tree_w_internal = get_msa_output("tkf") + "/tree.nwk"
     threads: 1
     resources:
         mem_mb=4096
@@ -116,15 +145,40 @@ rule simulate_tkf_alignment:
             --root-length {wildcards.root_length} \
             --seed {wildcards.seed} \
             --output-dir $(dirname {output.msa})
-        cp {input.tree} {output.tree_copy}
+        """
+
+rule tkf_sim_alignment_logl: 
+    input:
+        msa = get_msa_output("tkf") + "/masa.fasta",
+        tree = get_msa_output("tkf") + "/tree.nwk"
+    output:
+        logl = get_msa_output("tkf") + "/sim_logl.out",
+        log = get_msa_output("tkf") + "/sim_logl_log.txt"
+    shell:
+        """
+        mkdir -p $(dirname {output.logl})
+        {MODEL_SEARCH_PHYLO} \
+            --out-folder $(dirname {output.logl}) \
+            --seq-file {input.msa} \
+            --tree-file {input.tree} \
+            --model {wildcards.model}\
+            --params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
+            --gap-handling TKF92 \
+            --epsilon inf \
+            --seed {wildcards.seed} \
+            -l warn 
+        mv $(dirname {output.logl})/*/*.out {output.logl}
+        mv $(dirname {output.logl})/*/*.log {output.log}
+        rm -rf $(dirname {output.logl})/*/
         """
 
 rule simulate_alisim_alignment:
     input:
-        tree = TREE_PATH
+        tree = TREE_PATH,
+        tree_wo = TREE_PATH + ".wo" # it complained about the (); around the whole newick tree so we use this instead
     output:
         msa = get_msa_output("alisim") + "/msa.fasta",
-        tree_copy = get_msa_output("alisim") + "/tree.nwk"
+        tree_w_internal = get_msa_output("alisim") + "/tree.nwk"
     threads: 1
     resources:
         mem_mb=1024
@@ -134,19 +188,20 @@ rule simulate_alisim_alignment:
         {IQTREE3} \
             --alisim $(dirname {output.msa})/msa \
             -m {MSA_SIM_TOOLS[alisim][model]} \
-            -t {input.tree} \
+            -t {input.tree_wo} \
             --indel {wildcards.ir},{wildcards.ip} \
             --length {wildcards.root_length} \
             --seed {wildcards.seed} \
             --out-format fasta \
             --no-unaligned 
         mv $(dirname {output.msa})/msa.fa {output.msa}
-        cp {input.tree} {output.tree_copy}
+        cp {input.tree} {output.tree_w_internal}
         """
 
 rule simulate_alisim_ancestral_alignment:
     input:
-        tree = TREE_PATH
+        tree = TREE_PATH,
+        tree_wo = TREE_PATH + ".wo" # it complained about the (); around the whole newick tree so we use this instead
     output:
         msa = get_msa_output("alisim") + "/masa.fasta",
     threads: 1
@@ -158,7 +213,7 @@ rule simulate_alisim_ancestral_alignment:
         {IQTREE3} \
             --alisim $(dirname {output.msa})/masa \
             -m {MSA_SIM_TOOLS[alisim][model]} \
-            -t {input.tree} \
+            -t {input.tree_wo} \
             --indel {wildcards.ir},{wildcards.ip} \
             --length {wildcards.root_length} \
             --seed {wildcards.seed} \
@@ -168,19 +223,27 @@ rule simulate_alisim_ancestral_alignment:
         mv $(dirname {output.msa})/masa.fa {output.msa}
         """
 
+#######################################################################
+#######################################################################
+# MODEL PARAMETER INFERENCE
+#######################################################################
+#######################################################################
+
 rule jati_model_param_search:
     input:
+        masa = MSA_PATH + "/masa.fasta",
         msa = MSA_PATH + "/msa.fasta",
         tree = MSA_PATH + "/tree.nwk"
     output:
-        final_tree = get_inf_output("jati_model_param_search") + "/final_tree.nwk",
         logl = get_inf_output("jati_model_param_search") + "/logl.out",
-        log = get_inf_output("jati_model_param_search") + "/log.txt"
+        log = get_inf_output("jati_model_param_search") + "/log.txt",
+        params = get_inf_output("jati_model_param_search") + "/params.json"
     threads: 1
     resources:
         mem_mb=4096
     params:
         epsilon = MODEL_PARAMS_INF_TOOLS["jati_model_param_search"]["epsilon"],
+        seq_file = lambda wc, input: input.masa if wc.gap == "TKF92" else input.msa,
         paras = " ".join(map(str, MODEL_PARAMS_INF_TOOLS["jati_model_param_search"]["params"])),
         out_base = get_inf_output("jati_model_param_search")
     shell:
@@ -189,7 +252,7 @@ rule jati_model_param_search:
         rm -rf {params.out_base}
         {MODEL_SEARCH_PHYLO} \
             --out-folder {params.out_base} \
-            --seq-file {input.msa} \
+            --seq-file {params.seq_file} \
             --tree-file {input.tree} \
             --model {wildcards.model} \
             --params {params.paras} \
@@ -197,12 +260,17 @@ rule jati_model_param_search:
             --epsilon {params.epsilon} \
             --seed {wildcards.seed} \
             -l warn 
-        mv {params.out_base}/*/*.newick {output.final_tree}
         mv {params.out_base}/*/*.out {output.logl}
         mv {params.out_base}/*/*.log {output.log}
+        mv {params.out_base}/*/*.json {output.params}
         rm -rf {params.out_base}/*/
         """
 
+#######################################################################
+#######################################################################
+# TREE INFERENCE
+#######################################################################
+#######################################################################
 
 rule jati_inference:
     input:

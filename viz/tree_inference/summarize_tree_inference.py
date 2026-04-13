@@ -9,7 +9,7 @@ from viz.tree.utils import get_tree_params
 from viz.msa.utils import get_msa_sim_params
 from viz.tree_inference.utils import get_tree_inference_params
 from viz.utils import load_snakemake_config_yaml, get_last_line_value, add_to_ordered_set, write_table
-from utils import RESULTS_INF_DIR, all_inf_dirs, distances_for_true_vs_inferred
+from utils import RESULTS_INF_DIR, all_inf_dirs, distances_for_true_vs_inferred, distances_for_true_vs_start_nj_tree
 
 def main():
     config = load_snakemake_config_yaml()
@@ -48,7 +48,11 @@ def main():
         row.update(distances_for_true_vs_inferred(d))
         row["runtime_seconds"] = get_last_line_value(os.path.join(d, "time.txt"))
         row["logl"] = get_last_line_value(os.path.join(d, "logl.out"))
-        # start tree distances in case we have the jati tool
+        if row.get("inference_tool") == "jati":
+            distances = distances_for_true_vs_start_nj_tree(d)
+            for dist_name, dist_value in distances.items():
+                row[f"true_vs_start_nj_{dist_name}"] = dist_value
+            
         # true tree lolg, ie model search under jati
 
         all_rows.append(row)

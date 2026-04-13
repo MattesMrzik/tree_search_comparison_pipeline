@@ -39,3 +39,9 @@ def distances_for_true_vs_inferred(d):
         true_tree_path = os.path.join(msa_dir, "tree.nwk")
         inferred_tree_path = os.path.join(d, "final_tree.nwk")
         return calculate_distances(true_tree_path, inferred_tree_path)
+
+def distances_for_true_vs_start_nj_tree(d):
+        msa_dir = get_msa_dir_from_inf(d)
+        true_tree_path = os.path.join(msa_dir, "tree.nwk")
+        inferred_tree_path = os.path.join(d, "start_tree.nwk")
+        return calculate_distances(true_tree_path, inferred_tree_path)
