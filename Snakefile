@@ -126,11 +126,13 @@ rule tree_png:
 
 rule simulate_tkf_alignment:
     input:
-        tree = TREE_PATH
+        tree = TREE_PATH,
+        tree_wo = TREE_PATH + ".wo" # it complained about the (); around the
     output:
         msa = get_msa_output("tkf") + "/msa.fasta",
         masa = get_msa_output("tkf") + "/masa.fasta",
-        tree_w_internal = get_msa_output("tkf") + "/tree.nwk"
+        tree_w_internal = get_msa_output("tkf") + "/tree.nwk",
+        tree_w_internal_wo = get_msa_output("tkf") + "/tree.nwk.wo"
     threads: 1
     resources:
         mem_mb=4096
@@ -145,6 +147,7 @@ rule simulate_tkf_alignment:
             --root-length {wildcards.root_length} \
             --seed {wildcards.seed} \
             --output-dir $(dirname {output.msa})
+        cp {input.tree_wo} {output.tree_w_internal_wo}
         """
 
 rule tkf_sim_alignment_logl: 
@@ -178,7 +181,8 @@ rule simulate_alisim_alignment:
         tree_wo = TREE_PATH + ".wo" # it complained about the (); around the whole newick tree so we use this instead
     output:
         msa = get_msa_output("alisim") + "/msa.fasta",
-        tree_w_internal = get_msa_output("alisim") + "/tree.nwk"
+        tree_w_internal = get_msa_output("alisim") + "/tree.nwk",
+        tree_w_internal_wo = get_msa_output("alisim") + "/tree.nwk.wo"
     threads: 1
     resources:
         mem_mb=1024
@@ -196,6 +200,7 @@ rule simulate_alisim_alignment:
             --no-unaligned 
         mv $(dirname {output.msa})/msa.fa {output.msa}
         cp {input.tree} {output.tree_w_internal}
+        cp {input.tree_wo} {output.tree_w_internal_wo}
         """
 
 rule simulate_alisim_ancestral_alignment:
@@ -264,6 +269,25 @@ rule jati_model_param_search:
         mv {params.out_base}/*/*.log {output.log}
         mv {params.out_base}/*/*.json {output.params}
         rm -rf {params.out_base}/*/
+        """
+
+rule iqtree_model_param_search:
+    input:
+        msa = MSA_PATH + "/msa.fasta",
+        tree = MSA_PATH + "/tree.nwk.wo"
+    output:
+        logl = get_inf_output("iqtree_model_param_search") + "/logl.out",
+        log = get_inf_output("iqtree_model_param_search") + "/log.txt"
+    threads: 1
+    resources:
+        mem_mb=4096
+    shell:
+        """
+        mkdir -p $(dirname {output.logl})
+        {IQTREE3} -s {input.msa} -m {wildcards.model} -t {input.tree} --prefix $(dirname {output.logl})/iqtree_model_search -nt 1 --seed {wildcards.seed} -redo -blfix
+        mv $(dirname {output.logl})/*.log {output.log}
+        grep "Optimal log-likelihood:" {output.log} | sed 's/.*: //' > {output.logl}
+        rm $(dirname {output.logl})/iqtree_model_search*
         """
 
 #######################################################################

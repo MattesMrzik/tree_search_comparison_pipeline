@@ -68,12 +68,15 @@ model_parameters_inf_tools:
     model_gap:
       # - {model: "jc69", gap: "PIP"}
       # - {model: "jc69", gap: "TKF92"} # i dont need the subst params search as we have Jc
-      # - {model: "jc69", gap: "Missing"}
+      - {model: "jc69", gap: "Missing"}
       - {model: "NONE", gap: "TKF92"}
       # -blfix arg to iqtree could be used to check against Missing, i checked one manually and it was the same
     epsilon: 1e-5
     params: [0.03, 0.04, 0.5]
     path_snippet: "{model}_{gap}"
+  iqtree_model_param_search:
+    model: ["JC"]
+    path_snippet: "{model}"
 
 tree_inf_dir: "results/tree_inference/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
 tree_inf_tools:
