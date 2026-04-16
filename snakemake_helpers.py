@@ -63,35 +63,40 @@ def expand_tool_combos(cfg_dict):
 
 config = load_snakemake_config_yaml()
 
+# To match the wildcards in the paths to the correct stage
 STAGES = {
-    "tree": ("tree_sim_tool",  "tree_params", config["tree_sim"]["tools"]),
-    "msa":  ("msa_sim_tool",   "msa_params",  config["msa_sim"]["tools"]),
-    "tinf": ("inference_tool", "inf_params",  config["tree_inf"]["tools"]),
-    "minf": ("inference_tool", "inf_params",  config["model_param_inf"]["tools"]),
+    "tree_sim": {"tool_wc": "tree_sim_tool", "params_wc": "tree_params"},
+    "msa_sim": {"tool_wc": "msa_sim_tool", "params_wc": "msa_params"},
+    "model_param_inf": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
+    "tree_inf": {"tool_wc": "inference_tool", "params_wc": "inf_params"},
 }
 
+def make_targets(cfg, *stages, primary, suffix=""):
+    all_stages = list(stages) + [primary]
+    path_template = cfg[primary]["dir"] + suffix
 
-def make_targets(path_template, *stage_keys):
-    combos = [list(expand_tool_combos(STAGES[k][2])) for k in stage_keys]
-    wc_pairs = [(STAGES[k][0], STAGES[k][1]) for k in stage_keys]
+    combos = [list(expand_tool_combos(cfg[stage]["tools"])) for stage in all_stages]
+    wc_pairs = [(STAGES[stage]["tool_wc"], STAGES[stage]["params_wc"]) for stage in all_stages]
+
     targets = []
     for combo in product(*combos):
         kwargs = {wc: val
                   for (tool_wc, params_wc), (tool, params) in zip(wc_pairs, combo)
                   for wc, val in [(tool_wc, tool), (params_wc, params)]}
-        targets += expand(path_template, seed=config["seeds"], **kwargs)
+        targets += expand(path_template, seed=cfg["seeds"], **kwargs)
     return targets
 
 def get_tree_path(tool_name):
     tool_conf = config["tree_sim"]["tools"][tool_name]
-    return config["tree_sim"]["dir"].replace("{tree_sim_tool}", tool_name).replace("{tree_params}", tool_conf["path_snippet"])
+    snippet = tool_conf.get("path_snippet", tool_name)
+    return config["tree_sim"]["dir"].replace("{tree_sim_tool}", tool_name).replace("{tree_params}", snippet)
 
 def get_msa_output(tool_name):
     tool_conf = config["msa_sim"]["tools"][tool_name]
-    return config["msa_sim"]["dir"].replace("{msa_sim_tool}", tool_name).replace("{msa_params}", tool_conf["path_snippet"])
+    snippet = tool_conf.get("path_snippet", tool_name)
+    return config["msa_sim"]["dir"].replace("{msa_sim_tool}", tool_name).replace("{msa_params}", snippet)
 
 def get_inf_output(tool_type, tool_name):
-    if tool_type not in config:
-        raise ValueError(f"Unknown tool type: {tool_type}")
     tool_conf = config[tool_type]["tools"][tool_name]
-    return config[tool_type]["dir"].replace("{inference_tool}", tool_name).replace("{inf_params}", tool_conf["path_snippet"])
+    snippet = tool_conf.get("path_snippet", tool_name)
+    return config[tool_type]["dir"].replace("{inference_tool}", tool_name).replace("{inf_params}", snippet)

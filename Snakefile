@@ -43,21 +43,21 @@ wildcard_constraints:
 
 rule all_trees:
     input:
-        make_targets(config["tree_sim"]["dir"], "tree")
+        make_targets(config, primary="tree_sim")
 
 rule all_msas:
     input:
-        make_targets(config["msa_sim"]["dir"] + "/msa.fasta", "tree", "msa"),
-        make_targets(config["msa_sim"]["dir"] + "/masa.fasta", "tree", "msa"),
-        [f for f in make_targets(config["msa_sim"]["dir"] + "/sim_logl.out", "tree", "msa") if "/tkf/" in f]
+        make_targets(config, "tree_sim", primary="msa_sim", suffix="/msa.fasta"),
+        make_targets(config, "tree_sim", primary="msa_sim", suffix="/masa.fasta"),
+        [f for f in make_targets(config, "tree_sim", primary="msa_sim", suffix="/sim_logl.out") if "/tkf/" in f]
 
 rule all_model_infs:
     input:
-        make_targets(config["model_param_inf"]["dir"] + "/logl.out", "tree", "msa", "minf")
+        make_targets(config, "tree_sim", "msa_sim", primary="model_param_inf", suffix="/logl.out")
 
 rule all_tree_infs:
     input:
-        make_targets(config["tree_inf"]["dir"] + "/final_tree.nwk", "tree", "msa", "tinf")
+        make_targets(config, "tree_sim", "msa_sim", primary="tree_inf", suffix="/final_tree.nwk")
 
 rule all_tree_pngs:
     input:
