@@ -169,6 +169,7 @@ rule tkf_sim_alignment_logl:
             --params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
             --gap-handling TKF92 \
             --epsilon inf \
+            --freq-opt fixed \
             --seed {wildcards.seed} \
             -l warn 
         mv $(dirname {output.logl})/*/*.out {output.logl}
