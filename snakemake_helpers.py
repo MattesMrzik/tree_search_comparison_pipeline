@@ -26,6 +26,9 @@ def infer_wildcard_constraints_flat(cfg_dict):
                     constraints[inner_k] = constraint
             elif isinstance(v, list) and len(v) > 0 and isinstance(v[0], list):
                 raise ValueError(f"Use list of dicts instead of list of lists for {k}")
+            elif isinstance(v, list) and len(v) == 0:
+                print("empty list, skipping")
+                continue
             else:
                 val = v[0] if isinstance(v, list) else v
                 constraint = infer_constraint(val)
