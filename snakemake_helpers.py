@@ -1,5 +1,6 @@
 from itertools import product
 import re
+from typing import cast
 
 from snakemake.io import expand
 
@@ -14,7 +15,7 @@ def infer_wildcard_constraints(config):
 
 def infer_wildcard_constraints_flat(cfg_dict):
     constraints = {"seed": r"\d+"}
-    for tool_name, tool_cfg in cfg_dict.items():
+    for _, tool_cfg in cfg_dict.items(): # first return is tool name
         for k, v in tool_cfg.items():
             if k == "path_snippet":
                 continue
@@ -99,7 +100,7 @@ def make_targets(cfg, *stages, primary, suffix=""):
         kwargs = {wc: val
                   for (tool_wc, params_wc), (tool, params) in zip(wc_pairs, combo)
                   for wc, val in [(tool_wc, tool), (params_wc, params)]}
-        targets += expand(path_template, seed=cfg["seeds"], **kwargs)
+        targets += cast(list[str], expand(path_template, seed=cfg["seeds"], **kwargs))
     return targets
 
 def get_tree_path(tool_name):
