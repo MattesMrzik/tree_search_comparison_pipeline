@@ -25,7 +25,7 @@ def test_infer_indels():
     assert i3_events[0].start == 1
     assert i3_events[0].end == 3 
     assert i3_events[0].distance_steps == 1
-    assert i3_events[0].distance_length == 0.3
+    assert i3_events[0].distance_length == 5
 
     b2_events = events.get_by_node("B2")
     assert len(b2_events) == 2
@@ -36,7 +36,7 @@ def test_infer_indels():
     assert b2_events[1].start == 7 
     assert b2_events[1].end == 10
     assert b2_events[1].distance_steps == 2
-    assert b2_events[1].distance_length == 2.3
+    assert b2_events[1].distance_length == 3 + 5
 
     a1_events = events.get_by_node("A1")
     assert len(a1_events) == 1
@@ -44,7 +44,7 @@ def test_infer_indels():
     assert a1_events[0].start ==3 
     assert a1_events[0].end == 7 
     assert a1_events[0].distance_steps == 2
-    assert a1_events[0].distance_length == 2.4
+    assert a1_events[0].distance_length == 2 + 5
 
     col2_events = events.get_by_column(2)
     assert len(col2_events) == 2 

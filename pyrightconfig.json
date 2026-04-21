@@ -1,0 +1,12 @@
+{
+  "exclude": [
+    "**/results/**",
+    "**/build/**",
+    "**/.snakemake/**",
+    "**/data/**",
+    "**/*.ipynb",
+    "**/__pycache__/**",
+    "**/.venv/**",
+    "**/back_ups/**",
+  ]
+}
