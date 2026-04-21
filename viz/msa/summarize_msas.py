@@ -1,17 +1,12 @@
 import os
-import sys
-
-
-# Add the project root to sys.path to allow imports from viz/msa/ and viz/tree/
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
 from viz.msa.msa_features import get_fasta_length, get_gap_stats, calculate_gap_free_entropy
 from viz.msa.utils import all_msa_dirs, load_msa
 from viz.utils import load_snakemake_config_yaml, add_to_ordered_set, write_table
 from viz.msa.utils import RESULTS_MSA_DIR
 from snakemake_helpers import get_tool_params
+
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
 def main():
     config = load_snakemake_config_yaml()

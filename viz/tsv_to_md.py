@@ -24,14 +24,14 @@ def main():
         
         # Ensure directory exists
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        
-        with open(output_path, 'w') as f:
-            f.write("---\n")
-            f.write("cssclasses:\n")
-            f.write("  - page-100\n")
-            f.write("---\n\n")
-            f.write("# Pipeline Execution Summary\n\n")
-            f.write(md_table)
+        if md_table is not None: 
+            with open(output_path, 'w') as f:
+                f.write("---\n")
+                f.write("cssclasses:\n")
+                f.write("  - page-100\n")
+                f.write("---\n\n")
+                f.write("# Pipeline Execution Summary\n\n")
+                f.write(md_table)
             
     except Exception as e:
         print(f"Error converting TSV to Markdown: {e}")

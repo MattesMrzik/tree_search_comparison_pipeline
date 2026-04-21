@@ -1,17 +1,12 @@
-import os
-import sys
 import dendropy
-from typing import Dict
-
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
+from typing import Dict, Set
 
 from viz.msa.utils import load_msa
 from viz.indel_points_inference.utils import (
     load_tree,
     infer_indels,
     EventType,
+    IndelEvent,
     IndelEvents,
 )
 
@@ -34,7 +29,12 @@ def _compute_indel_measures(
     return row
 
 # TODO: when i have these the kimIndelignProbabilisticFramework2007 could also be calculated in the notebook and not here
-def kimIndelignProbabilisticFramework2007(suffix, true_set , inferred_set, true_events, inferred_events) -> Dict[str, float]:
+def kimIndelignProbabilisticFramework2007(suffix,
+                                          true_set: Set[IndelEvent],
+                                          inferred_set: Set[IndelEvent],
+                                          true_events: IndelEvents,
+                                          inferred_events: IndelEvents
+                                          ) -> Dict[str, float]:
     row = {}
     matched_true = true_set & inferred_set
 

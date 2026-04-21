@@ -1,5 +1,4 @@
 import os
-import sys
 
 RESULTS_DIR = "results"
 TREE_INF_DIR = "tree_inference"
@@ -7,8 +6,6 @@ RESULTS_INF_DIR = os.path.join(RESULTS_DIR, TREE_INF_DIR)
 MSA_DIR = "msas"
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
 from viz.tree.calculate_distances import calculate_distances
 

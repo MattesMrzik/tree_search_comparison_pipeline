@@ -1,11 +1,8 @@
 import os
 import yaml
 import csv
-import sys
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
 def add_to_ordered_set(ordered_set, new_keys):
     for key in new_keys:

@@ -1,9 +1,6 @@
 import os
-import sys
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
 from viz.utils import load_snakemake_config_yaml, get_last_line_value, add_to_ordered_set, write_table
 from utils import RESULTS_INF_DIR, all_inf_dirs, distances_for_true_vs_inferred, distances_for_true_vs_start_nj_tree

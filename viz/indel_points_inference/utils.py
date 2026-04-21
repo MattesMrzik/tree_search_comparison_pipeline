@@ -1,10 +1,9 @@
+import copy
+from dataclasses import dataclass, replace
 import dendropy
-from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Set, Optional
 from intervaltree import IntervalTree
-import copy
-from dataclasses import replace
 
 class EventType(Enum):
     INSERTION = "insertion"
