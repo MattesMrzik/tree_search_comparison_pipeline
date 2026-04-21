@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Set, Optional
 from intervaltree import IntervalTree
+import copy
+from dataclasses import replace
 
 class EventType(Enum):
     INSERTION = "insertion"
@@ -59,6 +61,16 @@ class IndelEvents:
             columns.update(range(max(ev.start, start), min(ev.end, end)))
         return columns
 
+    def is_dollo(self) -> bool:
+        covered_columns = set()
+        for event in self.events:
+            if event.event_type == EventType.INSERTION:
+                for col in range(event.start, event.end):
+                    if col in covered_columns:
+                        return False
+                    covered_columns.add(col)
+        return True
+
     def count_by_type(self, event_type: EventType) -> int:
         return sum(1 for e in self.events if e.event_type == event_type)
 
@@ -66,12 +78,9 @@ class IndelEvents:
         new_events = IndelEvents()
         for event in self.events:
             for col in range(event.start, event.end):
-                new_events.add(IndelEvent(
-                    node=event.node,
-                    start=col,
-                    end=col + 1,
-                    event_type=event.event_type,
-                ))
+                single_site_event = copy.deepcopy(event)
+                single_site_event = replace(single_site_event, start=col, end=col + 1)
+                new_events.add(single_site_event)
         return new_events
 
 # TODO: if run-time becomes an issue, we can optimize this by caching distances to root for all nodes in the tree.
@@ -138,7 +147,7 @@ def infer_indels(msa: Dict[str, str], tree: dendropy.Tree) -> IndelEvents:
                     ))
             else:
                 i += 1
-
+    assert events.is_dollo(), "Inferred events violate Dollo's law, which should not happen with a correct implementation."
     return events
 
 def load_tree(newick_path: str) -> dendropy.Tree:

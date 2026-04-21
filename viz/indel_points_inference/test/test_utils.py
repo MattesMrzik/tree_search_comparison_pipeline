@@ -10,7 +10,7 @@ from viz.indel_points_inference.utils import load_tree, infer_indels, EventType
 
 def test_infer_indels():
     base_dir = os.path.join(os.path.dirname(__file__), "data")
-    msa_path = os.path.join(base_dir, "true_msa.fasta")
+    msa_path = os.path.join(base_dir, "msa.fasta")
     tree_path = os.path.join(base_dir, "tree.nwk")
 
     msa = load_msa(msa_path)
@@ -20,7 +20,7 @@ def test_infer_indels():
 
     print(f"Total events: {len(events.events)}")
     for e in events.events:
-        print(f"  Node {e.node}: {e.event_type.name} at [{e.start}, {e.end})")
+        print(e)
 
     assert len(events.events) == 4, f"Expected 4 events, got {len(events.events)}"
 
