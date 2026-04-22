@@ -2,11 +2,12 @@ import os
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 
-from viz.utils import load_snakemake_config_yaml, add_to_ordered_set, write_table
+from viz.utils import load_snakemake_config_yaml, add_to_ordered_set, write_table, get_last_line_value
 from viz.indel_points_inference.summarize_utils import (
     RESULTS_INF_DIR,
     all_indel_inf_dirs,
     compare_indel_events,
+    get_msa_dir_from_inf
 )
 from snakemake_helpers import get_tool_params
 
@@ -44,6 +45,10 @@ def main():
         row.update(i_params)
 
         row.update(compare_indel_events(d))
+        row["logl"] = get_last_line_value(os.path.join(d, "logl.out"))
+
+        # take logl from inferred msa, and compare it to the true msa logl from the tfk simulaino
+        row["true_logl"] = get_last_line_value(os.path.join(get_msa_dir_from_inf(d), "sim_indel_logl.out"))
 
         all_rows.append(row)
         all_keys.update(row.keys())

@@ -44,7 +44,8 @@ rule all_msas:
     input:
         make_targets(config, "tree_sim", primary="msa_sim", suffix="/msa.fasta"),
         make_targets(config, "tree_sim", primary="msa_sim", suffix="/masa.fasta"),
-        [f for f in make_targets(config, "tree_sim", primary="msa_sim", suffix="/sim_logl.out") if "/tkf/" in f]
+        [f for f in make_targets(config, "tree_sim", primary="msa_sim", suffix="/sim_logl.out") if "/tkf/" in f],
+        [f for f in make_targets(config, "tree_sim", primary="msa_sim", suffix="/sim_indel_logl.out") if "/tkf/" in f]
 
 rule all_model_infs:
     input:
@@ -190,6 +191,32 @@ rule tkf_sim_alignment_logl:
         rm -rf $(dirname {output.logl})/*/
         """
 
+rule tkf_sim_alignment_indel_logl: 
+    input:
+        msa = get_msa_output("tkf") + "/masa.fasta",
+        tree = get_msa_output("tkf") + "/tree.nwk"
+    output:
+        logl = get_msa_output("tkf") + "/sim_indel_logl.out",
+        log = get_msa_output("tkf") + "/sim_indel_logl_log.txt"
+    shell:
+        """
+        mkdir -p $(dirname {output.logl})
+        {MODEL_SEARCH_PHYLO} \
+            --out-folder $(dirname {output.logl}) \
+            --seq-file {input.msa} \
+            --tree-file {input.tree} \
+            --model none \
+            --params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
+            --gap-handling TKF92 \
+            --epsilon inf \
+            --freq-opt fixed \
+            --seed {wildcards.seed} \
+            -l warn 
+        mv $(dirname {output.logl})/*/*.out {output.logl}
+        mv $(dirname {output.logl})/*/*.log {output.log}
+        rm -rf $(dirname {output.logl})/*/
+        """
+
 rule simulate_alisim_alignment:
     input:
         tree = TREE_PATH,
@@ -324,6 +351,7 @@ rule tkf_indel_asr:
         """
         rm -rf $(dirname {output.asr})
         mkdir -p $(dirname {output.asr})
+        # the --params are from the simulation
         {INDEL_ASR} \
             --seq-file {input.msa} \
             --tree-file {input.tree} \
@@ -332,15 +360,17 @@ rule tkf_indel_asr:
             --params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
             --seed {wildcards.seed} \
             --max-iterations {wildcards.max_iterations} \
+            -l warn \
             --epsilon {wildcards.epsilon} 
         """
 
 rule parsimony_indel_asr:
     input:
-        msa = MSA_PATH + "/msa.fasta",
-        tree = MSA_PATH + "/tree.nwk"
+        msa = get_msa_output("tkf") + "/msa.fasta",
+        tree = get_msa_output("tkf") + "/tree.nwk"
+        # we only use tkf alignments here since we want to calculate the logl of the parsimony ASR under the true params
     output:
-        asr = get_inf_output("asr", "dollo_parsimony") + "/masa.fasta"
+        asr = get_inf_output_with_msa_params("asr", "dollo_parsimony", "tkf") + "/masa.fasta"
     threads: 1
     resources:
         mem_mb=4096
@@ -348,11 +378,14 @@ rule parsimony_indel_asr:
         """
         rm -rf $(dirname {output.asr})
         mkdir -p $(dirname {output.asr})
+        # the --params are used to calculate the lolg of the parsimony ASR under the true params, i.e., the ones used for the simulation
         {INDEL_ASR} \
             --seq-file {input.msa} \
             --tree-file {input.tree} \
             --out-folder $(dirname {output.asr}) \
+            --params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
             --algorithm-type parsimony \
+            -l warn \
             --seed {wildcards.seed} 
         """
 
@@ -377,6 +410,7 @@ rule tkf_indel_asr_and_params:
             --algorithm-type tkf92 \
             --params {wildcards.lambda} {wildcards.mu} {wildcards.r} \
             --seed {wildcards.seed} \
+            -l warn \
             --max-iterations {wildcards.max_iterations} \
             --epsilon {wildcards.epsilon} \
             -o # optimize params
