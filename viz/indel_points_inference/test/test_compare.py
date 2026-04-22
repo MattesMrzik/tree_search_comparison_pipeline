@@ -2,7 +2,7 @@ import os
 
 from viz.indel_points_inference.compare import compare_from_files
 
-def test_compare_indel_annotations():
+def test_compare_insertion_annotations():
     base_dir = os.path.join(os.path.dirname(__file__), "data")
     tree_path = os.path.join(base_dir, "tree.nwk")
     true_msa_path = os.path.join(base_dir, "true_msa.fasta")
@@ -42,5 +42,16 @@ def test_compare_indel_annotations():
 
     print("All tests passed!")
 
+def test_compare_deletion_annotations():
+    base_dir = os.path.join(os.path.dirname(__file__), "data/deletions")
+    tree_path = os.path.join(base_dir, "tree.nwk")
+    true_msa_path = os.path.join(base_dir, "true_msa.fasta")
+    inferred_msa_path = os.path.join(base_dir, "inferred_msa.fasta")
+
+    result = compare_from_files(tree_path, true_msa_path, inferred_msa_path)
+    for k, v in result.items():
+        print(f"{k}: {v}")
+
 if __name__ == "__main__":
-    test_compare_indel_annotations()
+    test_compare_insertion_annotations()
+    test_compare_deletion_annotations()

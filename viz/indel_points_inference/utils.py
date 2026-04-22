@@ -82,6 +82,20 @@ class IndelEvents:
                 new_events.add(single_site_event)
         return new_events
 
+    # including the node itself
+    def get_events_below_node_for_column(self, tree: dendropy.Tree, node_label: str, col: int) -> List[IndelEvent]:
+        node = tree.find_node_with_label(node_label)
+        if node is None:
+            print(f"Warning: Node with label {node_label} not found in tree.")
+            return []
+        descendant_labels = {desc.label for desc in node.preorder_iter() if desc.label}
+        events = []
+        events_in_col = self.get_by_column(col)
+        for event in events_in_col:
+            if event.node in descendant_labels:
+                events.append(event)
+        return events
+
 # TODO: if run-time becomes an issue, we can optimize this by caching distances to root for all nodes in the tree.
 def _compute_distance_to_root(node: dendropy.Node) -> tuple:
     steps = 0

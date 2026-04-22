@@ -12,6 +12,7 @@ from viz.indel_points_inference.utils import (
 )
 
 def _compute_indel_measures(
+    tree: dendropy.Tree,
     true_events: IndelEvents,
     inferred_events: IndelEvents,
     suffix: str,
@@ -21,11 +22,9 @@ def _compute_indel_measures(
     inferred_set = set(inferred_events.events)
     row.update(kimIndelignProbabilisticFramework2007(suffix, true_set, inferred_set, true_events, inferred_events))
 
-    # for now only for the short events. But here how do we weight the mistakes, 
-    # since long events that are here considered as many single site events will be 
-    # more heavily penalized than short events.
-    if suffix == "short": 
+    if suffix == "short":
         row.update(short_insertion_statistics(true_events, inferred_events))
+        row.update(short_deletion_statistics(tree, true_events, inferred_events))
 
     return row
 
@@ -112,9 +111,9 @@ def short_insertion_statistics(true_events: IndelEvents, inferred_events: IndelE
     row = {}
     ins_step_diff = []
     ins_len_diff = []
-    ins_step_diff_root_ins_at_true = []
+    ins_step_diff_root_ins_at_true = [] # the len (ie n) of this the number of too many insertions
     ins_len_diff_root_ins_at_true = []
-    ins_step_diff_root_ins_at_inf = []
+    ins_step_diff_root_ins_at_inf = [] # the len (ie n) of this the number of missing insertions
     ins_len_diff_root_ins_at_inf = []
 
     # if the inferred is an insertion but the true has the char also at the root,
@@ -157,6 +156,79 @@ def short_insertion_statistics(true_events: IndelEvents, inferred_events: IndelE
     return row
 
 
+def _get_descendant_nodes(node: dendropy.Node) -> Set[str]:
+    descendants = set()
+    if node.label is not None:
+        descendants.add(node.label)
+    for child in node.child_node_iter():
+        descendants.update(_get_descendant_nodes(child))
+    return descendants
+
+def short_deletion_statistics(
+    tree: dendropy.Tree,
+    true_events: IndelEvents,
+    inferred_events: IndelEvents,
+) -> Dict[str, float]:
+    suffix = "short"
+    row = {}
+
+    del_correct = 0
+    del_too_high_step = []
+    del_too_high_len = []
+    del_too_low_step = []
+    del_too_low_len = []
+    missing_dels = 0 # can happen if the insertion was inferred too low
+    too_much_dels = 0 # can happen if the insertion was inferred too high
+
+    columns = set()
+    for event in true_events.events:
+        if event.event_type == EventType.DELETION:
+            columns.add(event.start)
+    for event in inferred_events.events:
+        if event.event_type == EventType.DELETION:
+            columns.add(event.start)
+
+    for col in columns:
+        true_dels = set([e for e in true_events.get_by_column(col) if e.event_type == EventType.DELETION])
+        inf_dels = set([e for e in inferred_events.get_by_column(col) if e.event_type == EventType.DELETION])
+
+        for true_del in true_dels:
+            descendant_events = inferred_events.get_events_below_node_for_column(tree, true_del.node, col)
+            if len(descendant_events) == 0:
+                missing_dels += 1
+                continue
+            assert all(e.event_type == EventType.DELETION for e in descendant_events)
+            if len(descendant_events) == 1 and descendant_events[0].node == true_del.node:
+                del_correct += 1
+                inf_dels.remove(descendant_events[0])
+                continue
+            else:
+                # TODO: do this without creating the list of differences 
+                del_too_low_step.append(statistics.mean(e.distance_steps - true_del.distance_steps for e in descendant_events))
+                del_too_low_len.append(statistics.mean(e.distance_length - true_del.distance_length for e in descendant_events))
+                for e in descendant_events:
+                    inf_dels.remove(e)
+
+        for inf_del in inf_dels:
+            descendant_events = true_events.get_events_below_node_for_column(tree, inf_del.node, col)
+            if len(descendant_events) == 0:
+                too_much_dels += 1
+                continue
+            assert all(e.event_type == EventType.DELETION for e in descendant_events)
+            missing_dels -= len(descendant_events)
+            del_too_high_step.append(statistics.mean(inf_del.distance_steps - e.distance_steps for e in descendant_events))
+            del_too_high_len.append(statistics.mean(inf_del.distance_length - e.distance_length for e in descendant_events))
+
+
+    _compute_diff_stats(del_too_high_step, del_too_high_len, f"{suffix}_del_too_high", row)
+    _compute_diff_stats(del_too_low_step, del_too_low_len, f"{suffix}_del_too_low", row)
+    row[f"{suffix}_del_correct"] = del_correct
+    row[f"{suffix}_del_missing"] = missing_dels
+    row[f"{suffix}_del_too_much"] = too_much_dels
+
+    return row
+
+
 def compare_indel_annotations(
     tree: dendropy.Tree,
     true_msa: Dict[str, str],
@@ -164,7 +236,7 @@ def compare_indel_annotations(
 ) -> Dict[str, float]:
     true_events = infer_indels(true_msa, tree)
     inferred_events = infer_indels(inferred_msa, tree)
-    long_measures = _compute_indel_measures(true_events, inferred_events, "long")
+    long_measures = _compute_indel_measures(tree, true_events, inferred_events, "long")
 
     true_short = true_events.split_to_single_site()
     inferred_short = inferred_events.split_to_single_site()
@@ -174,7 +246,7 @@ def compare_indel_annotations(
     print("inferred short events:")
     for e in inferred_short.events:
         print(e)
-    short_measures = _compute_indel_measures(true_short, inferred_short, "short")
+    short_measures = _compute_indel_measures(tree, true_short, inferred_short, "short")
 
     return {**long_measures, **short_measures}
 
