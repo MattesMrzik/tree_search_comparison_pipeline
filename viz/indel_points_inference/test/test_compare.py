@@ -9,8 +9,8 @@ def test_compare_insertion_annotations():
     inferred_msa_path = os.path.join(base_dir, "inferred_msa.fasta")
 
     result = compare_from_files(tree_path, true_msa_path, inferred_msa_path)
-    for k, v in result.items():
-        print(f"{k}: {v}")
+    # for k, v in result.items():
+    #     print(f"{k}: {v}")
 
     assert result["long_nit"] == 3
     assert result["long_ndt"] == 2 
@@ -40,7 +40,7 @@ def test_compare_insertion_annotations():
 
     assert result["short_nie"] == result["short_ins_root_ins_at_true_n"] + result["short_ins_n"]
 
-    print("All tests passed!")
+    print("All test_compare_insertion_annotations passed!")
 
 def test_compare_deletion_annotations():
     base_dir = os.path.join(os.path.dirname(__file__), "data/deletions")
@@ -49,8 +49,20 @@ def test_compare_deletion_annotations():
     inferred_msa_path = os.path.join(base_dir, "inferred_msa.fasta")
 
     result = compare_from_files(tree_path, true_msa_path, inferred_msa_path)
-    for k, v in result.items():
-        print(f"{k}: {v}")
+    # for k, v in result.items():
+    #     print(f"{k}: {v}")
+
+    assert result["short_del_too_high_step_diff_mean"] == -1
+    assert result["short_del_too_high_len_diff_mean"] == -2.5
+    assert result["short_del_too_high_n"] == 1
+    assert result["short_del_too_low_step_diff_mean"] == 1
+    assert result["short_del_too_low_len_diff_mean"] == 2.5
+    assert result["short_del_too_low_n"] == 1
+    assert result["short_del_correct"] == 3
+    assert result["short_del_missing"] == 2
+    assert result["short_del_too_much"] == 1
+
+    print("All test_compare_deletion_annotations passed!")
 
 if __name__ == "__main__":
     test_compare_insertion_annotations()

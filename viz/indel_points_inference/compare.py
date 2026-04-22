@@ -240,12 +240,6 @@ def compare_indel_annotations(
 
     true_short = true_events.split_to_single_site()
     inferred_short = inferred_events.split_to_single_site()
-    print("true short events:")
-    for e in true_short.events:
-        print(e)
-    print("inferred short events:")
-    for e in inferred_short.events:
-        print(e)
     short_measures = _compute_indel_measures(tree, true_short, inferred_short, "short")
 
     return {**long_measures, **short_measures}
