@@ -131,6 +131,7 @@ def short_insertion_statistics(true_events: IndelEvents, inferred_events: IndelE
                     if true_event.event_type == EventType.INSERTION:
                         ins_step_diff.append(inf_event.distance_steps - true_event.distance_steps)
                         ins_len_diff.append(inf_event.distance_length - true_event.distance_length)
+                        print("the diff is ", inf_event.distance_steps - true_event.distance_steps)
     # there can also be an insertion in the true that is not in the inferred.
     for true_event in true_events.events:
         if true_event.event_type == EventType.INSERTION:

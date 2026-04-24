@@ -17,18 +17,18 @@ def all_indel_inf_dirs(base_dir=os.path.join(project_root, RESULTS_INF_DIR)):
     return inf_dirs
 
 # TODO: this is basically the same as the one in tree inference utils
-def get_msa_dir_from_inf(inf_dir):
+def get_msa_dir_from_inf(inf_dir, inf_type = INDEL_INF_DIR):
     parts = inf_dir.split(os.sep)
-    inf_idx = parts.index(INDEL_INF_DIR)
+    inf_idx = parts.index(inf_type)
     msa_parts = list(parts)
     msa_parts[inf_idx] = MSA_DIR
     # the last 3 parts are tree_inf_tool, tree_inf_params and seed, we want to keep seed
     msa_dir_path = os.sep.join(msa_parts[:-3] + [msa_parts[-1]])
     return msa_dir_path
 
-def compare_indel_events(d):
-    msa_dir = get_msa_dir_from_inf(d)
-    tree_dir = get_msa_dir_from_inf(d)
+def compare_indel_events(d, inf_type = INDEL_INF_DIR):
+    msa_dir = get_msa_dir_from_inf(d, inf_type)
+    tree_dir = get_msa_dir_from_inf(d, inf_type)
     tree_path = os.path.join(tree_dir, "tree.nwk")
     true_msa_path = os.path.join(msa_dir, "masa.fasta")
     inferred_msa_path = os.path.join(d, "masa.fasta")
