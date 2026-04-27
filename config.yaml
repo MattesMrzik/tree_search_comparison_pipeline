@@ -5,23 +5,23 @@ env: local
 environments:
   local:
     python_bin: "/Users/mrzi/miniforge3/envs/snakemake/bin/python3"
-    python_module: "" # Not needed locally
     evolver: "/Users/mrzi/Documents/software/paml4/paml/src/evolver"
+    iqtree3: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
     root_tree: "/Users/mrzi/Documents/develop/tkf_eval/tools/root_tree/target/debug/root_tree_and_internal_labels"
     simulate_tkf: "/Users/mrzi/Documents/develop/tkf_eval/tools/simulate_tkf/target/debug/simulate_tkf"
-    iqtree3: "/Users/mrzi/Documents/software/iqtree3/iqtree3/build/iqtree3"
     model_search_phylo: "/Users/mrzi/Documents/develop/tkf_eval/tools/model_search_phylo/target/debug/model-search-phylo"
     jati: "/Users/mrzi/Documents/develop/tkf_eval/tools/JATI/target/debug/jati"
     indel_asr: "/Users/mrzi/Documents/develop/tkf_eval/tools/indel_asr/target/debug/indel_asr"
   hpc:
     python_bin: "python3"
-    python_module: ""
-    conda_env: "snakemake"
-    evolver: "evolver"
-    simulate_tkf: "/cfs/earth/scratch/mrzi/develop/simulate_tkf/target/release/simulate_tkf"
-    iqtree3: "/cfs/earth/scratch/mrzi/software/iqtree3/iqtree3/build/iqtree3"
-    model_search_phylo: "/cfs/earth/scratch/mrzi/develop/model_search_phylo/target/release/model-search-phylo"
-    jati: "/cfs/earth/scratch/mrzi/develop/jati_tkf/JATI/target/release/jati"
+    # we dont need the active env, we can just point it to the bins (that where installed in the env)
+    evolver: "/cfs/earth/scratch/mrzi/.conda/envs/snakemake/bin/evolver"
+    iqtree3: "/cfs/earth/scratch/mrzi/.conda/envs/snakemake/bin/iqtree"
+    root_tree: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/root_tree_and_internal_labels"
+    simulate_tkf: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/simulate_tkf"
+    model_search_phylo: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/model-search-phylo"
+    jati: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/jati"
+    indel_asr: "/cfs/earth/scratch/mrzi/develop/tkf_eval/tools/root_tree/target/debug/indel_asr"
 
 # General
 seeds: [1]

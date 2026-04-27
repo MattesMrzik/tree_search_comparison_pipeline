@@ -1,13 +1,13 @@
 # profiles/slurm/config.yaml
 executor: slurm
-jobs: 320
+jobs: 20
 # i can define groups here such that i dont dispatch a job for every rule, which decreases slurm overhead 
 # but if i group and have one thread per rule, is there parallel execution within the group?
 # for longer tasks like jait i think its okeay to have no grouping
 default-resources:
   - slurm_partition=earth-3
   - slurm_qos=earth-3.test
-  - slurm_time="1-00:00:00"
+  - slurm_time="0-00:01:00"
   - slurm_extra="--constraint=rhel8"
   - mem_mb=4096
   - threads=1
