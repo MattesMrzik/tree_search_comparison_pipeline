@@ -84,6 +84,7 @@ rule all_indel_and_param_infs:
 #######################################################################
 
 rule evolver_tree:
+    priority: lambda wildcards: -int(wildcards.seed)
     output:
         tree = get_tree_path("evolver"),
         tree_raw = get_tree_path("evolver") + ".raw",
@@ -101,6 +102,7 @@ rule evolver_tree:
         """
 
 rule iqtree_tree:
+    priority: lambda wildcards: -int(wildcards.seed)
     output:
         tree = get_tree_path("iqtree"),
         tree_raw = get_tree_path("iqtree") + ".raw",
@@ -115,6 +117,7 @@ rule iqtree_tree:
         """
 
 rule tree_png:
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         tree = TREE_PATH
     output:
@@ -135,6 +138,7 @@ rule tree_png:
 #######################################################################
 
 rule simulate_tkf_alignment:
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         tree = TREE_PATH,
         tree_wo = TREE_PATH + ".wo" # it complained about the (); around the
@@ -161,6 +165,7 @@ rule simulate_tkf_alignment:
         """
 
 rule tkf_sim_alignment_logl: 
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         msa = get_msa_output("tkf") + "/masa.fasta",
         tree = get_msa_output("tkf") + "/tree.nwk"
@@ -187,6 +192,7 @@ rule tkf_sim_alignment_logl:
         """
 
 rule tkf_sim_alignment_indel_logl: 
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         msa = get_msa_output("tkf") + "/masa.fasta",
         tree = get_msa_output("tkf") + "/tree.nwk"
@@ -213,6 +219,7 @@ rule tkf_sim_alignment_indel_logl:
         """
 
 rule simulate_alisim_alignment:
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         tree = TREE_PATH,
         tree_wo = TREE_PATH + ".wo" # it complained about the (); around the whole newick tree so we use this instead
@@ -241,6 +248,7 @@ rule simulate_alisim_alignment:
         """
 
 rule simulate_alisim_ancestral_alignment:
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         tree = TREE_PATH,
         tree_wo = TREE_PATH + ".wo" # it complained about the (); around the whole newick tree so we use this instead
@@ -272,6 +280,7 @@ rule simulate_alisim_ancestral_alignment:
 #######################################################################
 
 rule jati_model_param_search:
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         masa = MSA_PATH + "/masa.fasta", # using this for TKF
         msa = MSA_PATH + "/msa.fasta", # using this for non-TKF
@@ -306,6 +315,7 @@ rule jati_model_param_search:
         """
 
 rule iqtree_model_param_search:
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         msa = MSA_PATH + "/msa.fasta",
         tree = MSA_PATH + "/tree.nwk.wo"
@@ -331,6 +341,7 @@ rule iqtree_model_param_search:
 #######################################################################
 
 rule tkf_indel_asr:
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         msa = get_msa_output("tkf") + "/msa.fasta",
         tree = get_msa_output("tkf") + "/tree.nwk"
@@ -357,6 +368,7 @@ rule tkf_indel_asr:
         """
 
 rule parsimony_indel_asr:
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         msa = get_msa_output("tkf") + "/msa.fasta",
         tree = get_msa_output("tkf") + "/tree.nwk"
@@ -382,6 +394,7 @@ rule parsimony_indel_asr:
         """
 
 rule tkf_indel_asr_and_params:
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         msa = MSA_PATH + "/msa.fasta",
         tree = MSA_PATH + "/tree.nwk"
@@ -417,6 +430,7 @@ rule tkf_indel_asr_and_params:
 # TODO also ouput params and msa
 
 rule jati_inference:
+    priority: lambda wildcards: -int(wildcards.seed)
     input:
         msa = MSA_PATH + "/msa.fasta"
     output:
