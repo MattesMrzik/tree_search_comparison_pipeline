@@ -23,10 +23,6 @@ environments:
     model_search_phylo: "/cfs/earth/scratch/mrzi/develop/model_search_phylo/target/release/model-search-phylo"
     jati: "/cfs/earth/scratch/mrzi/develop/jati_tkf/JATI/target/release/jati"
 
-# NOTE on Regex Fields:
-# 'tree_match', 'match_regex', and 'inf_match' are used by scripts/aggregate_results.py
-# to extract metadata directly from directory names.
-
 # General
 seeds: [1]
 
@@ -34,7 +30,7 @@ tree_sim:
   dir: "results/trees/{tree_sim_tool}/{tree_params}/seed{seed}.nwk"
   tools:
     evolver:
-      species: [8]
+      species: []
       birth_death:
         - {birth: 1.0, death: 2.0}
       sampling_fraction: [0.25]
@@ -72,31 +68,14 @@ model_param_inf:
   tools:
     jati_model_param_search:
       model_gap:
-        - {model: "jc69", gap: "Missing"}
+        # - {model: "jc69", gap: "Missing"}
         - {model: "NONE", gap: "TKF92"}
       epsilon: 1e-5
       max_iterations: 5
-      path_snippet: "{model}_{gap}"
+      path_snippet: "{model}_{gap}_{max_iterations}iter_epsilon{epsilon}"
     iqtree_model_param_search:
-      model: ["JC"]
-      path_snippet: "{model}"
-
-tree_inf:
-  dir: "results/tree_inference/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
-  tools:
-    jati:
-      model_gap_move:
-        - {model: "jc69", gap: "PIP", move: "NNI"}
-        - {model: "jc69", gap: "Missing", move: "NNI"}
-        - {model: "jc69", gap: "Missing", move: "SPR"}
-        - {model: "jc69", gap: "PIP", move: "SPR"}
-        - {model: "jc69", gap: "TKF92", move: "NNI"}
-        - {model: "NONE", gap: "TKF92", move: "NNI"}
-      max_iterations: 5
-      # check to add all params to the path snippet. perhaps just not starting params that will be set by default values id the slice is merged. Ahh the slice is already merged. i can remove it and alsi adjust the jati bin
-      path_snippet: "{model}_{gap}_{move}"
-    iqtree:
-      model: ["JC"]
+      # model: ["JC"]
+      model: []
       path_snippet: "{model}"
 
 asr: # with fixed true model parameters
@@ -114,7 +93,25 @@ asr_and_params:
   tools:
     jati_asr_and_params:
       start_params: 
-        - {lambda: 0.1, mu: 0.2, r: 0.5}
+        - {s_l: 0.1, s_m: 0.2, s_r: 0.5}
       max_iterations: 5
       epsilon: 1e-5
-      path_snippet: "l{lambda}_mu{mu}_r{r}_{max_iterations}iter_epsilon{epsilon}"
+      path_snippet: "l{s_l}_mu{s_m}_r{s_r}_{max_iterations}iter_epsilon{epsilon}"
+
+tree_inf:
+  dir: "results/tree_inference/{tree_sim_tool}/{tree_params}/{msa_sim_tool}/{msa_params}/{inference_tool}/{inf_params}/seed{seed}"
+  tools:
+    jati:
+      model_gap_move:
+        - {model: "jc69", gap: "PIP", move: "NNI"}
+        - {model: "jc69", gap: "Missing", move: "NNI"}
+        - {model: "jc69", gap: "Missing", move: "SPR"}
+        - {model: "jc69", gap: "PIP", move: "SPR"}
+        - {model: "jc69", gap: "TKF92", move: "NNI"}
+        - {model: "NONE", gap: "TKF92", move: "NNI"}
+      max_iterations: 5
+      epsilon: 1e-5
+      path_snippet: "{model}_{gap}_{move}_{max_iterations}iter_epsilon{epsilon}"
+    iqtree:
+      model: ["JC"]
+      path_snippet: "{model}"
